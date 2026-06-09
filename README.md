@@ -75,6 +75,45 @@ Criar uma solução que permita:
 
 * PostgreSQL
 
+## Como rodar localmente
+
+### Pré-requisitos
+
+* Node.js 20+
+* Docker (para PostgreSQL)
+
+### Passos
+
+```bash
+# 1. Instalar dependências
+npm install
+
+# 2. Subir o banco de dados
+docker compose up -d
+
+# 3. Copiar variáveis de ambiente
+cp .env.example .env
+
+# 4. Rodar migrations e seed
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+
+# 5. Iniciar API e frontend
+npm run dev
+```
+
+* Frontend: http://localhost:3000
+* API: http://localhost:3001
+* Swagger: http://localhost:3001/docs
+
+### Contas de exemplo (seed)
+
+| Papel | Telefone | OTP (dev) |
+|-------|----------|-----------|
+| Organizadora | 11999990000 | 123456 |
+| Participante | 11988880000 | 123456 |
+
 ## Status
 
-Projeto em fase de planejamento e modelagem.
+MVP implementado — monorepo com API NestJS, frontend Next.js e banco PostgreSQL.

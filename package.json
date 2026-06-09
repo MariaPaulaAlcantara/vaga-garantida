@@ -1,0 +1,21 @@
+{
+  "name": "vaga-garantida",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @vaga-garantida/api\" \"npm run dev -w @vaga-garantida/web\"",
+    "dev:api": "npm run dev -w @vaga-garantida/api",
+    "dev:web": "npm run dev -w @vaga-garantida/web",
+    "build": "npm run build -w @vaga-garantida/database && npm run build -w @vaga-garantida/api && npm run build -w @vaga-garantida/web",
+    "db:generate": "npm run generate -w @vaga-garantida/database",
+    "db:migrate": "npm run migrate -w @vaga-garantida/database",
+    "db:seed": "npm run seed -w @vaga-garantida/database",
+    "db:studio": "npm run studio -w @vaga-garantida/database"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PARTICIPANT
+  ORGANIZER
+}
+
+enum EventStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  RESERVED
+  CONFIRMED
+  WAITLIST
+  CANCELLED
+  EXPIRED
+  ATTENDED
+  NO_SHOW
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   @unique
+  role      UserRole @default(PARTICIPANT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizedEvents Event[]             @relation("OrganizerEvents")
+  registrations   EventRegistration[]
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  organizerId String
+  title       String
+  description String      @db.Text
+  startsAt    DateTime
+  location    String
+  capacity    Int
+  status      EventStatus @default(DRAFT)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  organizer     User                @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  registrations EventRegistration[]
+  policy        ConfirmationPolicy?
+
+  @@index([status, startsAt])
+}
+
+model ConfirmationPolicy {
+  eventId               String @id
+  opensHoursBefore      Int    @default(48)
+  closesHoursBefore     Int    @default(12)
+  promotedConfirmHours  Int    @default(4)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model EventRegistration {
+  id                   String             @id @default(uuid())
+  eventId              String
+  userId               String
+  status               RegistrationStatus
+  waitlistPosition     Int?
+  joinedAt             DateTime           @default(now())
+  confirmedAt          DateTime?
+  confirmationDeadline DateTime?
+  cancelledAt          DateTime?
+  attendedAt           DateTime?
+  updatedAt            DateTime           @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+  @@index([eventId, waitlistPosition])
+}
+
+model OtpSession {
+  id        String   @id @default(uuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
