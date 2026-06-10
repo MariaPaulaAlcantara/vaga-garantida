@@ -114,6 +114,50 @@ npm run dev
 | Organizadora | 11999990000 | 123456 |
 | Participante | 11988880000 | 123456 |
 
+## Deploy da API no Railway
+
+O repositório inclui `railway.toml` na raiz. Use o serviço apontando para a raiz do monorepo (não para `apps/api`).
+
+### Build Command
+
+```bash
+npm install && npm run build:api
+```
+
+(`build:api` compila `@vaga-garantida/database` com `prisma generate` e depois a API.)
+
+### Start Command
+
+```bash
+node apps/api/dist/main.js
+```
+
+Execute a partir da raiz do repositório. Não use `node dist/main` na raiz — o build da API fica em `apps/api/dist/`.
+
+### Variáveis de ambiente
+
+| Variável | Obrigatória | Exemplo |
+|----------|-------------|---------|
+| `DATABASE_URL` | Sim | `postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require` |
+| `JWT_SECRET` | Sim | string aleatória longa |
+| `JWT_EXPIRES_IN` | Não | `7d` |
+| `CORS_ORIGIN` | Sim (prod) | URL do frontend (ex.: `https://seu-app.vercel.app`) |
+| `OTP_MOCK_CODE` | Não | apenas dev |
+
+Railway define `PORT` automaticamente; a API escuta em `0.0.0.0`.
+
+### Health check
+
+`GET /health` — use como health check path no Railway (`/health`).
+
+### Verificação local (produção)
+
+```bash
+npm install
+npm run build:api
+node apps/api/dist/main.js
+```
+
 ## Status
 
 MVP implementado — monorepo com API NestJS, frontend Next.js e banco PostgreSQL.

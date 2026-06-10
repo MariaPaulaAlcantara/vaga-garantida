@@ -10,6 +10,8 @@
     "dev:api": "npm run dev -w @vaga-garantida/api",
     "dev:web": "npm run dev -w @vaga-garantida/web",
     "build": "npm run build -w @vaga-garantida/database && npm run build -w @vaga-garantida/api && npm run build -w @vaga-garantida/web",
+    "build:api": "npm run build -w @vaga-garantida/database && npm run build -w @vaga-garantida/api",
+    "start:api": "node apps/api/dist/main.js",
     "db:generate": "npm run generate -w @vaga-garantida/database",
     "db:migrate": "npm run migrate -w @vaga-garantida/database",
     "db:seed": "npm run seed -w @vaga-garantida/database",
