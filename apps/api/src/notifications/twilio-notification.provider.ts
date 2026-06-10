@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Twilio from 'twilio';
+import Twilio = require('twilio');
 import { NotificationProvider } from './notification.interface';
 import { toE164Brazil } from './phone.util';
 
 @Injectable()
 export class TwilioNotificationProvider implements NotificationProvider {
   private readonly logger = new Logger(TwilioNotificationProvider.name);
-  private readonly client: Twilio.Twilio;
+  private readonly client: ReturnType<typeof Twilio>;
   private readonly fromNumber: string;
 
   constructor(private readonly config: ConfigService) {
