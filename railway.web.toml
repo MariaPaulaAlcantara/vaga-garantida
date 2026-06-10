@@ -1,12 +1,12 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install && npm run build:api"
+buildCommand = "npm install && npm run build -w @vaga-garantida/web"
 
 [build.env]
 NIXPACKS_NODE_VERSION = "20"
 
 [deploy]
-startCommand = "npm run start:prod -w @vaga-garantida/api"
+startCommand = "npm run start -w @vaga-garantida/web"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"

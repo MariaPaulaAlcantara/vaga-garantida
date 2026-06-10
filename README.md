@@ -114,9 +114,20 @@ npm run dev
 | Organizadora | 11999990000 | 123456 |
 | Participante | 11988880000 | 123456 |
 
-## Deploy da API no Railway
+## Deploy no Railway (dois serviços)
 
-O repositório inclui `railway.toml` na raiz. Use o serviço apontando para a raiz do monorepo (não para `apps/api`).
+Use **dois serviços** no mesmo repositório, ambos com **Root Directory vazio** (raiz do monorepo).
+
+| Serviço | Config-as-code | Start |
+|---------|----------------|-------|
+| `@vaga-garantida/api` | `railway.toml` | API NestJS |
+| `@vaga-garantida/web` | `railway.web.toml` | Next.js |
+
+No painel de cada serviço: **Settings → Config-as-code** → informe o arquivo correto.
+
+**Networking:** aponte o domínio público para a porta que o Railway injeta (`PORT`, em geral `8080`) — a mesma nos logs de deploy.
+
+### API (`railway.toml`)
 
 ### Build Command
 
@@ -149,6 +160,13 @@ Railway define `PORT` automaticamente; a API escuta em `0.0.0.0`.
 ### Health check
 
 `GET /health` — use como health check path no Railway (`/health`).
+
+### Web (`railway.web.toml`)
+
+Variável obrigatória: `NEXT_PUBLIC_API_URL` = URL pública da API (sem barra no final). Deve existir **antes do build**.
+
+Build: `npm install && npm run build -w @vaga-garantida/web`  
+Start: `npm run start -w @vaga-garantida/web`
 
 ### Verificação local (produção)
 
