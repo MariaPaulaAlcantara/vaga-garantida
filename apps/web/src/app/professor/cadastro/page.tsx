@@ -2,19 +2,25 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
-export default function LoginPage() {
+export default function ProfessorCadastroPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { user, login, isLoading: authLoading } = useAuth();
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user?.role === 'ORGANIZER') {
+      router.push('/professor');
+    }
+  }, [authLoading, user, router]);
 
   async function handleRequestOtp(e: FormEvent) {
     e.preventDefault();
@@ -39,9 +45,10 @@ export default function LoginPage() {
         phone.replace(/\D/g, ''),
         code,
         name || undefined,
+        'organizer',
       );
       login(result.accessToken, result.user);
-      router.push('/eventos');
+      router.push('/professor/nova-aula');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Código inválido');
     } finally {
@@ -49,11 +56,15 @@ export default function LoginPage() {
     }
   }
 
+  if (authLoading) {
+    return <p className="text-slate-500">Carregando...</p>;
+  }
+
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="text-2xl font-bold text-slate-900">Entrar</h1>
+      <h1 className="text-2xl font-bold text-slate-900">Cadastro de professora</h1>
       <p className="mt-2 text-sm text-slate-500">
-        Use seu telefone para receber um código de verificação.
+        Cadastre-se com seu telefone para criar e gerenciar suas aulas de bike.
         Em desenvolvimento, use o código <strong>123456</strong>.
       </p>
 
@@ -115,7 +126,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full rounded-lg bg-emerald-600 py-2.5 text-white hover:bg-emerald-700 disabled:opacity-50"
           >
-            {loading ? 'Verificando...' : 'Confirmar'}
+            {loading ? 'Verificando...' : 'Confirmar cadastro'}
           </button>
           <button
             type="button"
@@ -128,9 +139,9 @@ export default function LoginPage() {
       )}
 
       <p className="mt-6 text-center text-sm text-slate-500">
-        Sou professora?{' '}
-        <Link href="/professor/cadastro" className="text-emerald-700 hover:underline">
-          Cadastre-se aqui
+        Sou aluna?{' '}
+        <Link href="/login" className="text-emerald-700 hover:underline">
+          Entrar aqui
         </Link>
       </p>
     </div>

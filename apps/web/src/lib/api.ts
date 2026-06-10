@@ -51,13 +51,18 @@ export const api = {
       body: JSON.stringify({ phone }),
     }),
 
-  verifyOtp: (phone: string, code: string, name?: string) =>
+  verifyOtp: (
+    phone: string,
+    code: string,
+    name?: string,
+    registerAs?: 'participant' | 'organizer',
+  ) =>
     request<{
       accessToken: string;
       user: { id: string; name: string; phone: string; role: string };
     }>('/auth/otp/verify', {
       method: 'POST',
-      body: JSON.stringify({ phone, code, name }),
+      body: JSON.stringify({ phone, code, name, registerAs }),
     }),
 
   getEvents: (token?: string | null) =>

@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { UserRole } from '@vaga-garantida/database';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -86,6 +88,8 @@ export class AuthService {
 
     await this.prisma.otpSession.delete({ where: { id: session.id } });
 
+    const registerAs = dto.registerAs ?? 'participant';
+
     let user = await this.usersService.findByPhone(phone);
     if (!user) {
       if (!dto.name?.trim()) {
@@ -93,7 +97,21 @@ export class AuthService {
           'Nome é obrigatório para novo cadastro',
         );
       }
-      user = await this.usersService.create({ name: dto.name.trim(), phone });
+      user = await this.usersService.create({
+        name: dto.name.trim(),
+        phone,
+        role:
+          registerAs === 'organizer'
+            ? UserRole.ORGANIZER
+            : UserRole.PARTICIPANT,
+      });
+    } else if (
+      registerAs === 'organizer' &&
+      user.role === UserRole.PARTICIPANT
+    ) {
+      throw new ConflictException(
+        'Este telefone já está cadastrado como aluno',
+      );
     }
 
     const token = this.jwtService.sign({

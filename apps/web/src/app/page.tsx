@@ -9,7 +9,7 @@ export default function HomePage() {
           Reserve sua vaga nas aulas gratuitas de bike, confirme presença e entre
           na lista de espera automaticamente quando uma vaga liberar.
         </p>
-        <div className="mt-6 flex gap-3">
+        <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/eventos"
             className="rounded-lg bg-white px-4 py-2 font-medium text-emerald-700 hover:bg-emerald-50"
@@ -21,6 +21,12 @@ export default function HomePage() {
             className="rounded-lg border border-emerald-300 px-4 py-2 hover:bg-emerald-700"
           >
             Entrar
+          </Link>
+          <Link
+            href="/professor/cadastro"
+            className="rounded-lg border border-emerald-300 px-4 py-2 hover:bg-emerald-700"
+          >
+            Sou professora
           </Link>
         </div>
       </section>

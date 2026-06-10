@@ -29,12 +29,20 @@ export class TwilioNotificationProvider implements NotificationProvider {
   private async sendSms(phone: string, body: string): Promise<void> {
     const to = toE164Brazil(phone);
 
-    await this.client.messages.create({
+    const message = await this.client.messages.create({
       to,
       from: this.fromNumber,
       body,
     });
 
-    this.logger.log(`SMS enviado para ${to}`);
+    this.logger.log(
+      `SMS criado para ${to} — SID: ${message.sid}, status: ${message.status}`,
+    );
+
+    if (message.errorCode) {
+      this.logger.error(
+        `Twilio erro ${message.errorCode}: ${message.errorMessage}`,
+      );
+    }
   }
 }

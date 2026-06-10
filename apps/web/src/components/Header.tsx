@@ -26,10 +26,10 @@ export function Header() {
               </Link>
               {user.role === 'ORGANIZER' && (
                 <Link
-                  href="/organizador"
+                  href="/professor"
                   className="text-slate-600 hover:text-emerald-700"
                 >
-                  Organizador
+                  Minhas aulas
                 </Link>
               )}
               <span className="text-slate-500">{user.name}</span>

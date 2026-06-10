@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MinLength,
+} from 'class-validator';
 
 export class VerifyOtpDto {
   @ApiProperty({ example: '11999998888' })
@@ -19,4 +26,9 @@ export class VerifyOtpDto {
   @IsString()
   @MinLength(2)
   name?: string;
+
+  @ApiPropertyOptional({ enum: ['participant', 'organizer'], default: 'participant' })
+  @IsOptional()
+  @IsIn(['participant', 'organizer'])
+  registerAs?: 'participant' | 'organizer';
 }
