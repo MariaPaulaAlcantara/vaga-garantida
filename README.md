@@ -153,9 +153,24 @@ Execute a partir da raiz do repositório. Não use `node dist/main` na raiz — 
 | `JWT_SECRET` | Sim | string aleatória longa |
 | `JWT_EXPIRES_IN` | Não | `7d` |
 | `CORS_ORIGIN` | Sim (prod) | URL do frontend (ex.: `https://seu-app.vercel.app`) |
-| `OTP_MOCK_CODE` | Não | apenas dev |
+| `OTP_MOCK_CODE` | Não | apenas dev (sem Twilio) |
+| `TWILIO_ACCOUNT_SID` | Sim (SMS) | `ACxxxxxxxx` |
+| `TWILIO_AUTH_TOKEN` | Sim (SMS) | token do Twilio |
+| `TWILIO_PHONE_NUMBER` | Sim (SMS) | `+15551234567` (formato E.164) |
+
+Com as três variáveis Twilio preenchidas, o OTP é enviado por **SMS**. Sem elas, em dev usa `OTP_MOCK_CODE`; em produção o código aparece nos logs (`[MOCK OTP]`).
 
 Railway define `PORT` automaticamente; a API escuta em `0.0.0.0`.
+
+### OTP por SMS (Twilio) — piloto
+
+1. Crie conta em [twilio.com](https://www.twilio.com) e obtenha um número com SMS.
+2. No console Twilio: **Account SID**, **Auth Token**, número remetente.
+3. Adicione as três variáveis `TWILIO_*` no serviço **API** do Railway.
+4. Redeploy da API.
+5. No site, **Entrar** com telefone no formato `11999990000` — o SMS chega em alguns segundos.
+
+**Trial Twilio:** só envia SMS para números **verificados** no console (Phone Numbers → Verified Caller IDs).
 
 ### Health check
 

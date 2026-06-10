@@ -32,8 +32,14 @@ export class AuthService {
 
   async requestOtp(dto: RequestOtpDto) {
     const phone = this.normalizePhone(dto.phone);
+    const twilioConfigured = Boolean(
+      this.config.get<string>('TWILIO_ACCOUNT_SID') &&
+        this.config.get<string>('TWILIO_AUTH_TOKEN') &&
+        this.config.get<string>('TWILIO_PHONE_NUMBER'),
+    );
+
     const code =
-      this.config.get<string>('NODE_ENV') === 'production'
+      twilioConfigured || this.config.get<string>('NODE_ENV') === 'production'
         ? this.generateOtp()
         : this.config.get<string>('OTP_MOCK_CODE', '123456');
 
