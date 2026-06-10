@@ -2,6 +2,9 @@
   "name": "@vaga-garantida/api",
   "version": "0.0.1",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch",
