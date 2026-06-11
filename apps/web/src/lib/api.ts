@@ -44,7 +44,33 @@ async function request<T>(
   return res.json();
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+}
+
 export const api = {
+  register: (data: {
+    name: string;
+    email: string;
+    password: string;
+    phone: string;
+    registerAs?: 'participant' | 'organizer';
+  }) =>
+    request<{ accessToken: string; user: AuthUser }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  login: (email: string, password: string) =>
+    request<{ accessToken: string; user: AuthUser }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+
   requestOtp: (phone: string) =>
     request<{ message: string }>('/auth/otp/request', {
       method: 'POST',
@@ -59,7 +85,7 @@ export const api = {
   ) =>
     request<{
       accessToken: string;
-      user: { id: string; name: string; phone: string; role: string };
+      user: AuthUser;
     }>('/auth/otp/verify', {
       method: 'POST',
       body: JSON.stringify({ phone, code, name, registerAs }),

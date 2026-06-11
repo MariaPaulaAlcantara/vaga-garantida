@@ -82,7 +82,7 @@ export default function NovoEventoPage() {
           required
         />
         <Field label="Local" name="location" required />
-        <Field label="Capacidade" name="capacity" type="number" defaultValue="10" required />
+        <Field label="Capacidade" name="capacity" type="number" defaultValue="6" required />
         <Field
           label="Abrir confirmação (horas antes)"
           name="opensHoursBefore"

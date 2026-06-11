@@ -1,23 +1,30 @@
 import { PrismaClient, EventStatus, UserRole } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const passwordHash = await bcrypt.hash('senha1234', 10);
+
   const organizer = await prisma.user.upsert({
-    where: { phone: '11999990000' },
+    where: { email: 'ana@example.com' },
     update: {},
     create: {
       name: 'Professora Ana',
+      email: 'ana@example.com',
+      passwordHash,
       phone: '11999990000',
       role: UserRole.ORGANIZER,
     },
   });
 
   const participant = await prisma.user.upsert({
-    where: { phone: '11988880000' },
+    where: { email: 'joao@example.com' },
     update: {},
     create: {
       name: 'João Silva',
+      email: 'joao@example.com',
+      passwordHash,
       phone: '11988880000',
       role: UserRole.PARTICIPANT,
     },
@@ -29,7 +36,7 @@ async function main() {
 
   const event = await prisma.event.upsert({
     where: { id: '00000000-0000-0000-0000-000000000001' },
-    update: {},
+    update: { capacity: 6 },
     create: {
       id: '00000000-0000-0000-0000-000000000001',
       organizerId: organizer.id,
@@ -38,7 +45,7 @@ async function main() {
         'Aula gratuita de ciclismo para iniciantes. Traga sua bike e capacete.',
       startsAt,
       location: 'Parque Ibirapuera - Portão 7',
-      capacity: 10,
+      capacity: 6,
       status: EventStatus.OPEN,
       policy: {
         create: {
@@ -50,7 +57,12 @@ async function main() {
     },
   });
 
-  console.log('Seed concluído:', { organizer: organizer.phone, participant: participant.phone, event: event.title });
+  console.log('Seed concluído:', {
+    organizer: organizer.email,
+    participant: participant.email,
+    event: event.title,
+    defaultPassword: 'senha1234',
+  });
 }
 
 main()

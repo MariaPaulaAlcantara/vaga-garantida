@@ -5,7 +5,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UserRole } from '@vaga-garantida/database';
+import { User, UserRole } from '@vaga-garantida/database';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -15,6 +15,8 @@ import {
   NotificationProvider,
 } from '../notifications/notification.interface';
 import { UsersService } from '../users/users.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
@@ -32,6 +34,59 @@ export class AuthService {
     private readonly notifications: NotificationProvider,
   ) {}
 
+  async register(dto: RegisterDto) {
+    const email = this.usersService.normalizeEmail(dto.email);
+    const phone = this.usersService.normalizePhone(dto.phone);
+    const registerAs = dto.registerAs ?? 'participant';
+
+    const existingByEmail = await this.usersService.findByEmail(email);
+    if (existingByEmail) {
+      throw new ConflictException('Este email já está cadastrado');
+    }
+
+    const existingByPhone = await this.usersService.findByPhone(phone);
+    if (existingByPhone) {
+      if (
+        registerAs === 'organizer' &&
+        existingByPhone.role === UserRole.PARTICIPANT
+      ) {
+        throw new ConflictException(
+          'Este telefone já está cadastrado como aluno',
+        );
+      }
+      throw new ConflictException('Este telefone já está cadastrado');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const user = await this.usersService.create({
+      name: dto.name.trim(),
+      email,
+      phone,
+      passwordHash,
+      role:
+        registerAs === 'organizer' ? UserRole.ORGANIZER : UserRole.PARTICIPANT,
+    });
+
+    return this.buildAuthResponse(user);
+  }
+
+  async login(dto: LoginDto) {
+    const email = this.usersService.normalizeEmail(dto.email);
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user?.passwordHash) {
+      throw new UnauthorizedException('Email ou senha inválidos');
+    }
+
+    const valid = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Email ou senha inválidos');
+    }
+
+    return this.buildAuthResponse(user);
+  }
+
+  /** @deprecated Use register/login com email e senha */
   async requestOtp(dto: RequestOtpDto) {
     const phone = this.normalizePhone(dto.phone);
     const twilioConfigured = Boolean(
@@ -58,6 +113,7 @@ export class AuthService {
     return { message: 'Código enviado com sucesso' };
   }
 
+  /** @deprecated Use register/login com email e senha */
   async verifyOtp(dto: VerifyOtpDto) {
     const phone = this.normalizePhone(dto.phone);
     const session = await this.prisma.otpSession.findFirst({
@@ -89,46 +145,37 @@ export class AuthService {
     await this.prisma.otpSession.delete({ where: { id: session.id } });
 
     const registerAs = dto.registerAs ?? 'participant';
+    const user = await this.usersService.findByPhone(phone);
 
-    let user = await this.usersService.findByPhone(phone);
     if (!user) {
-      if (!dto.name?.trim()) {
-        throw new BadRequestException(
-          'Nome é obrigatório para novo cadastro',
-        );
-      }
-      user = await this.usersService.create({
-        name: dto.name.trim(),
-        phone,
-        role:
-          registerAs === 'organizer'
-            ? UserRole.ORGANIZER
-            : UserRole.PARTICIPANT,
-      });
-    } else if (
-      registerAs === 'organizer' &&
-      user.role === UserRole.PARTICIPANT
-    ) {
+      throw new BadRequestException(
+        'Cadastre-se com email e senha antes de entrar',
+      );
+    }
+
+    if (registerAs === 'organizer' && user.role === UserRole.PARTICIPANT) {
       throw new ConflictException(
         'Este telefone já está cadastrado como aluno',
       );
     }
 
-    const token = this.jwtService.sign({
+    return this.buildAuthResponse(user);
+  }
+
+  private buildAuthResponse(user: User) {
+    return {
+      accessToken: this.signToken(user),
+      user: this.usersService.toPublicUser(user),
+    };
+  }
+
+  private signToken(user: User) {
+    return this.jwtService.sign({
       sub: user.id,
+      email: user.email,
       phone: user.phone,
       role: user.role,
     });
-
-    return {
-      accessToken: token,
-      user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        role: user.role,
-      },
-    };
   }
 
   private normalizePhone(phone: string): string {

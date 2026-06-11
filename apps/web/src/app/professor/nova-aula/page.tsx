@@ -76,7 +76,7 @@ export default function NovaAulaPage() {
           label="Quantidade de alunos"
           name="capacity"
           type="number"
-          defaultValue="10"
+          defaultValue="6"
           required
         />
         <Field

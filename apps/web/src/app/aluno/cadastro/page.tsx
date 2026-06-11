@@ -6,7 +6,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
-export default function ProfessorCadastroPage() {
+export default function CadastroAlunoPage() {
   const router = useRouter();
   const { user, login, isLoading: authLoading } = useAuth();
   const [phone, setPhone] = useState('');
@@ -32,10 +32,10 @@ export default function ProfessorCadastroPage() {
         email,
         password: senha,
         phone: phone.replace(/\D/g, ''),
-        registerAs: 'organizer',
+        registerAs: 'participant',
       });
       login(result.accessToken, result.user);
-      router.push('/professor/nova-aula');
+      router.push('/eventos');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar');
     } finally {
@@ -49,10 +49,10 @@ export default function ProfessorCadastroPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="text-2xl font-bold text-slate-900">Cadastro de professora</h1>
+      <h1 className="text-2xl font-bold text-slate-900">Cadastro do aluno</h1>
       <p className="mt-2 text-sm text-slate-500">
-        Cadastre-se com email, senha e telefone para criar e gerenciar suas
-        aulas de bike.
+        Cadastre-se com email, senha e telefone para gerenciar e garantir sua
+        vaga nas aulas.
       </p>
 
       <form onSubmit={handleRegister} className="mt-6 space-y-4">
@@ -69,6 +69,7 @@ export default function ProfessorCadastroPage() {
             required
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700">
             Email
@@ -120,7 +121,7 @@ export default function ProfessorCadastroPage() {
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">
-        Sou aluna?{' '}
+        Já é cadastrado?{' '}
         <Link href="/login" className="text-emerald-700 hover:underline">
           Entrar aqui
         </Link>

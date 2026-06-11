@@ -31,12 +31,14 @@ enum RegistrationStatus {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String   @unique
-  role      UserRole @default(PARTICIPANT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  phone        String   @unique
+  role         UserRole @default(PARTICIPANT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   organizedEvents Event[]             @relation("OrganizerEvents")
   registrations   EventRegistration[]

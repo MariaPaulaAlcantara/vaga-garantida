@@ -1,36 +1,75 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { RegistrationStatus, UserRole } from '@vaga-garantida/database';
+import { RegistrationStatus, User, UserRole } from '@vaga-garantida/database';
 import { PrismaService } from '../prisma/prisma.service';
+
+export type PublicUser = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+};
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  normalizePhone(phone: string): string {
+    return phone.replace(/\D/g, '');
+  }
+
+  toPublicUser(user: User): PublicUser {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+    };
+  }
 
   findById(id: string) {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
   findByPhone(phone: string) {
-    const normalized = phone.replace(/\D/g, '');
+    const normalized = this.normalizePhone(phone);
     return this.prisma.user.findUnique({ where: { phone: normalized } });
   }
 
-  create(data: { name: string; phone: string; role?: UserRole }) {
-    const phone = data.phone.replace(/\D/g, '');
+  findByEmail(email: string) {
+    const normalized = this.normalizeEmail(email);
+    return this.prisma.user.findUnique({ where: { email: normalized } });
+  }
+
+  create(data: {
+    name: string;
+    email: string;
+    phone: string;
+    passwordHash: string;
+    role?: UserRole;
+  }) {
     return this.prisma.user.create({
       data: {
         name: data.name,
-        phone,
+        email: this.normalizeEmail(data.email),
+        phone: this.normalizePhone(data.phone),
+        passwordHash: data.passwordHash,
         role: data.role ?? UserRole.PARTICIPANT,
       },
     });
   }
 
   async updateProfile(userId: string, name: string) {
-    return this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id: userId },
       data: { name },
     });
+    return this.toPublicUser(user);
   }
 
   async getParticipationHistory(userId: string) {
@@ -71,6 +110,6 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
-    return user;
+    return this.toPublicUser(user);
   }
 }
