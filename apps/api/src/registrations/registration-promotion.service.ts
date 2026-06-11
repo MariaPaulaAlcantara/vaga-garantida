@@ -6,6 +6,10 @@ import {
   RegistrationStatus,
 } from '@vaga-garantida/database';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  computeConfirmationDeadline,
+  isConfirmationWindowOpen,
+} from './confirmation-window.util';
 
 const ACTIVE_SPOT_STATUSES: RegistrationStatus[] = [
   RegistrationStatus.RESERVED,
@@ -33,44 +37,14 @@ export class RegistrationPromotionService {
     policy: ConfirmationPolicy,
     promoted = false,
   ): Date | null {
-    const now = new Date();
-    const opensAt = new Date(
-      event.startsAt.getTime() - policy.opensHoursBefore * 60 * 60 * 1000,
-    );
-    const closesAt = new Date(
-      event.startsAt.getTime() - policy.closesHoursBefore * 60 * 60 * 1000,
-    );
-
-    if (promoted) {
-      const promotedDeadline = new Date(
-        now.getTime() + policy.promotedConfirmHours * 60 * 60 * 1000,
-      );
-      return promotedDeadline < closesAt ? promotedDeadline : closesAt;
-    }
-
-    if (now < opensAt) {
-      return closesAt;
-    }
-
-    if (now > closesAt) {
-      return null;
-    }
-
-    return closesAt;
+    return computeConfirmationDeadline(event.startsAt, policy, { promoted });
   }
 
   isConfirmationWindowOpen(
     event: Event,
     policy: ConfirmationPolicy,
   ): boolean {
-    const now = new Date();
-    const opensAt = new Date(
-      event.startsAt.getTime() - policy.opensHoursBefore * 60 * 60 * 1000,
-    );
-    const closesAt = new Date(
-      event.startsAt.getTime() - policy.closesHoursBefore * 60 * 60 * 1000,
-    );
-    return now >= opensAt && now <= closesAt;
+    return isConfirmationWindowOpen(event.startsAt, policy);
   }
 
   async promoteNextInWaitlist(

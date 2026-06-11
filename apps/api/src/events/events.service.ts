@@ -10,6 +10,7 @@ import {
   User,
 } from '@vaga-garantida/database';
 import { PrismaService } from '../prisma/prisma.service';
+import { toConfirmationWindowDto } from '../registrations/confirmation-window.util';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 
@@ -102,8 +103,8 @@ export class EventsService {
         status: dto.publish ? EventStatus.OPEN : EventStatus.DRAFT,
         policy: {
           create: {
-            opensHoursBefore: dto.opensHoursBefore ?? 48,
-            closesHoursBefore: dto.closesHoursBefore ?? 12,
+            opensDaysBefore: dto.opensDaysBefore ?? 1,
+            closesAtTime: dto.closesAtTime ?? '20:00',
             promotedConfirmHours: dto.promotedConfirmHours ?? 4,
           },
         },
@@ -142,15 +143,18 @@ export class EventsService {
         location: dto.location,
         capacity: dto.capacity,
         status: dto.status,
-        policy: dto.opensHoursBefore
-          ? {
-              update: {
-                opensHoursBefore: dto.opensHoursBefore,
-                closesHoursBefore: dto.closesHoursBefore,
-                promotedConfirmHours: dto.promotedConfirmHours,
-              },
-            }
-          : undefined,
+        policy:
+          dto.opensDaysBefore !== undefined ||
+          dto.closesAtTime !== undefined ||
+          dto.promotedConfirmHours !== undefined
+            ? {
+                update: {
+                  opensDaysBefore: dto.opensDaysBefore,
+                  closesAtTime: dto.closesAtTime,
+                  promotedConfirmHours: dto.promotedConfirmHours,
+                },
+              }
+            : undefined,
       },
       include: {
         policy: true,
@@ -211,6 +215,11 @@ export class EventsService {
       _count: { registrations: number };
       capacity: number;
       status: EventStatus;
+      startsAt?: Date;
+      policy?: {
+        opensDaysBefore: number;
+        closesAtTime: string;
+      } | null;
       [key: string]: unknown;
     },
   ) {
@@ -228,12 +237,18 @@ export class EventsService {
       availabilityStatus = 'open';
     }
 
+    const confirmationWindow =
+      event.startsAt && event.policy
+        ? toConfirmationWindowDto(event.startsAt, event.policy)
+        : undefined;
+
     const { _count, ...rest } = event;
     return {
       ...rest,
       occupiedSpots,
       availableSpots,
       availabilityStatus,
+      confirmationWindow,
     };
   }
 }

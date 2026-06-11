@@ -153,9 +153,14 @@ export interface Event {
   availableSpots: number;
   availabilityStatus: 'open' | 'full' | 'closed' | 'cancelled';
   policy?: {
-    opensHoursBefore: number;
-    closesHoursBefore: number;
+    opensDaysBefore: number;
+    closesAtTime: string;
     promotedConfirmHours: number;
+  };
+  confirmationWindow?: {
+    opensAt: string;
+    closesAt: string;
+    isOpen: boolean;
   };
 }
 
@@ -168,6 +173,11 @@ export interface Registration {
   joinedAt: string;
   confirmedAt: string | null;
   confirmationDeadline: string | null;
+  confirmationWindow?: {
+    opensAt: string;
+    closesAt: string;
+    isOpen: boolean;
+  };
   event?: Event;
   user?: { id: string; name: string; phone: string };
 }
@@ -187,8 +197,8 @@ export interface CreateEventInput {
   startsAt: string;
   location: string;
   capacity: number;
-  opensHoursBefore?: number;
-  closesHoursBefore?: number;
+  opensDaysBefore?: number;
+  closesAtTime?: string;
   promotedConfirmHours?: number;
   publish?: boolean;
 }

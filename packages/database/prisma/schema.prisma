@@ -64,10 +64,10 @@ model Event {
 }
 
 model ConfirmationPolicy {
-  eventId               String @id
-  opensHoursBefore      Int    @default(48)
-  closesHoursBefore     Int    @default(12)
-  promotedConfirmHours  Int    @default(4)
+  eventId              String @id
+  opensDaysBefore      Int    @default(1)
+  closesAtTime         String @default("20:00")
+  promotedConfirmHours Int    @default(4)
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }

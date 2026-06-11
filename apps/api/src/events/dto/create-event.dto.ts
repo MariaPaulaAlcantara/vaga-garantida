@@ -2,10 +2,12 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsDateString,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   Min,
   MinLength,
 } from 'class-validator';
@@ -36,17 +38,15 @@ export class CreateEventDto {
   @Min(1)
   capacity!: number;
 
-  @ApiPropertyOptional({ default: 48 })
+  @ApiPropertyOptional({ enum: [1, 2], default: 1 })
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  opensHoursBefore?: number;
+  @IsIn([1, 2])
+  opensDaysBefore?: number;
 
-  @ApiPropertyOptional({ default: 12 })
+  @ApiPropertyOptional({ example: '20:00', default: '20:00' })
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  closesHoursBefore?: number;
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Horário deve estar no formato HH:mm' })
+  closesAtTime?: string;
 
   @ApiPropertyOptional({ default: 4 })
   @IsOptional()

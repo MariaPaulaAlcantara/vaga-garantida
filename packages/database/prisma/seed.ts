@@ -36,7 +36,15 @@ async function main() {
 
   const event = await prisma.event.upsert({
     where: { id: '00000000-0000-0000-0000-000000000001' },
-    update: { capacity: 6 },
+    update: {
+      capacity: 6,
+      policy: {
+        update: {
+          opensDaysBefore: 1,
+          closesAtTime: '20:00',
+        },
+      },
+    },
     create: {
       id: '00000000-0000-0000-0000-000000000001',
       organizerId: organizer.id,
@@ -49,8 +57,8 @@ async function main() {
       status: EventStatus.OPEN,
       policy: {
         create: {
-          opensHoursBefore: 48,
-          closesHoursBefore: 12,
+          opensDaysBefore: 1,
+          closesAtTime: '20:00',
           promotedConfirmHours: 4,
         },
       },

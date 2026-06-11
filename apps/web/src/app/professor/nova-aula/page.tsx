@@ -38,6 +38,8 @@ export default function NovaAulaPage() {
         startsAt,
         location: form.get('location') as string,
         capacity: Number(form.get('capacity')),
+        opensDaysBefore: Number(form.get('opensDaysBefore')),
+        closesAtTime: form.get('closesAtTime') as string,
         publish: true,
       });
       router.push(`/professor/aulas/${event.id}`);
@@ -91,6 +93,27 @@ export default function NovaAulaPage() {
           name="time"
           type="time"
           defaultValue="08:00"
+          required
+        />
+        <div>
+          <label className="block text-sm font-medium text-slate-700">
+            Confirmação abre quantos dias antes?
+          </label>
+          <select
+            name="opensDaysBefore"
+            defaultValue="1"
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+            required
+          >
+            <option value="1">1 dia antes (mesmo horário da aula)</option>
+            <option value="2">2 dias antes (mesmo horário da aula)</option>
+          </select>
+        </div>
+        <Field
+          label="Prazo para confirmar (dia anterior à aula)"
+          name="closesAtTime"
+          type="time"
+          defaultValue="20:00"
           required
         />
         <div>

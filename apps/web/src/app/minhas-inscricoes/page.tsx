@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, Registration } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import {
+  canConfirmRegistration,
+  confirmationStatusMessage,
+} from '@/lib/confirmation';
 import { formatDate, formatStatus, statusColor } from '@/lib/format';
 
 export default function MinhasInscricoesPage() {
@@ -102,9 +106,15 @@ export default function MinhasInscricoesPage() {
                       Posição na fila: {reg.waitlistPosition}
                     </p>
                   )}
-                  {reg.confirmationDeadline && reg.status === 'RESERVED' && (
+                  {confirmationStatusMessage(
+                    reg.status,
+                    reg.confirmationWindow,
+                  ) && (
                     <p className="mt-1 text-sm text-amber-700">
-                      Confirme até {formatDate(reg.confirmationDeadline)}
+                      {confirmationStatusMessage(
+                        reg.status,
+                        reg.confirmationWindow,
+                      )}
                     </p>
                   )}
                 </div>
@@ -116,7 +126,7 @@ export default function MinhasInscricoesPage() {
               </div>
 
               <div className="mt-4 flex gap-2">
-                {reg.status === 'RESERVED' && (
+                {canConfirmRegistration(reg.status, reg.confirmationWindow) && (
                   <button
                     onClick={() => handleConfirm(reg.id)}
                     disabled={actionId === reg.id}

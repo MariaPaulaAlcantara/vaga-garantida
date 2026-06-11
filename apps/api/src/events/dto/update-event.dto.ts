@@ -3,9 +3,11 @@ import { EventStatus } from '@vaga-garantida/database';
 import {
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Min,
   MinLength,
 } from 'class-validator';
@@ -43,17 +45,15 @@ export class UpdateEventDto {
   @IsEnum(EventStatus)
   status?: EventStatus;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: [1, 2] })
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  opensHoursBefore?: number;
+  @IsIn([1, 2])
+  opensDaysBefore?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '20:00' })
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  closesHoursBefore?: number;
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Horário deve estar no formato HH:mm' })
+  closesAtTime?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -5,6 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, Event, Registration } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import {
+  canConfirmRegistration,
+  confirmationStatusMessage,
+} from '@/lib/confirmation';
 import { formatDate } from '@/lib/format';
 
 export default function EventoDetailPage() {
@@ -84,9 +88,15 @@ export default function EventoDetailPage() {
     return <p className="text-slate-500">Carregando...</p>;
   }
 
-  const canConfirm =
-    myRegistration?.status === 'RESERVED' &&
-    isConfirmationOpen(event, myRegistration);
+  const confirmationWindow =
+    myRegistration?.confirmationWindow ?? event.confirmationWindow;
+  const canConfirm = canConfirmRegistration(
+    myRegistration?.status ?? '',
+    confirmationWindow,
+  );
+  const confirmationMessage = myRegistration
+    ? confirmationStatusMessage(myRegistration.status, confirmationWindow)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -136,10 +146,10 @@ export default function EventoDetailPage() {
             <div className="w-full space-y-3">
               <p className="text-sm text-slate-600">
                 Status: <strong>{statusLabel(myRegistration)}</strong>
-                {myRegistration.confirmationDeadline && (
-                  <> — confirme até {formatDate(myRegistration.confirmationDeadline)}</>
-                )}
               </p>
+              {confirmationMessage && (
+                <p className="text-sm text-amber-700">{confirmationMessage}</p>
+              )}
 
               {canConfirm && (
                 <button
@@ -190,16 +200,4 @@ function statusLabel(reg: Registration) {
     CONFIRMED: 'Presença confirmada',
   };
   return labels[reg.status] ?? reg.status;
-}
-
-function isConfirmationOpen(event: Event, reg: Registration) {
-  if (!event.policy) return true;
-  const now = Date.now();
-  const startsAt = new Date(event.startsAt).getTime();
-  const opensAt = startsAt - event.policy.opensHoursBefore * 3600000;
-  const closesAt = startsAt - event.policy.closesHoursBefore * 3600000;
-  if (reg.confirmationDeadline) {
-    return now <= new Date(reg.confirmationDeadline).getTime();
-  }
-  return now >= opensAt && now <= closesAt;
 }

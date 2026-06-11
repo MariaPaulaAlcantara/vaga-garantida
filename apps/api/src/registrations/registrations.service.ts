@@ -11,6 +11,10 @@ import {
   UserRole,
 } from '@vaga-garantida/database';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  getConfirmationWindow,
+  toConfirmationWindowDto,
+} from './confirmation-window.util';
 import { RegistrationPromotionService } from './registration-promotion.service';
 import { MarkAttendanceDto } from './dto/mark-attendance.dto';
 
@@ -171,22 +175,20 @@ export class RegistrationsService {
       throw new BadRequestException('Política de confirmação não configurada');
     }
 
-    if (
-      !this.promotion.isConfirmationWindowOpen(registration.event, policy) &&
-      !registration.confirmationDeadline
-    ) {
-      throw new BadRequestException('Janela de confirmação ainda não abriu');
+    const now = new Date();
+    const window = getConfirmationWindow(registration.event.startsAt, policy, now);
+
+    if (!window.isOpen) {
+      if (now < window.opensAt) {
+        throw new BadRequestException(
+          `Confirmação disponível a partir de ${window.opensAt.toISOString()}`,
+        );
+      }
+      throw new BadRequestException('Prazo de confirmação expirado');
     }
 
-    const now = new Date();
-    const deadline =
-      registration.confirmationDeadline ??
-      this.promotion.computeConfirmationDeadline(
-        registration.event,
-        policy,
-      );
-
-    if (deadline && now > deadline) {
+    const deadline = registration.confirmationDeadline ?? window.closesAt;
+    if (now > deadline) {
       throw new BadRequestException('Prazo de confirmação expirado');
     }
 
@@ -200,7 +202,7 @@ export class RegistrationsService {
   }
 
   async findMine(userId: string) {
-    return this.prisma.eventRegistration.findMany({
+    const registrations = await this.prisma.eventRegistration.findMany({
       where: { userId },
       include: {
         event: {
@@ -217,6 +219,14 @@ export class RegistrationsService {
       },
       orderBy: { joinedAt: 'desc' },
     });
+
+    return registrations.map((registration) => ({
+      ...registration,
+      confirmationWindow: toConfirmationWindowDto(
+        registration.event.startsAt,
+        registration.event.policy,
+      ),
+    }));
   }
 
   async findForEventOrganizer(organizer: User, eventId: string) {

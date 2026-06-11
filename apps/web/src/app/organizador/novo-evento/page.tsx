@@ -33,8 +33,8 @@ export default function NovoEventoPage() {
         startsAt: form.get('startsAt') as string,
         location: form.get('location') as string,
         capacity: Number(form.get('capacity')),
-        opensHoursBefore: Number(form.get('opensHoursBefore')),
-        closesHoursBefore: Number(form.get('closesHoursBefore')),
+        opensDaysBefore: Number(form.get('opensDaysBefore')),
+        closesAtTime: form.get('closesAtTime') as string,
         promotedConfirmHours: Number(form.get('promotedConfirmHours')),
         publish: true,
       });
@@ -83,18 +83,25 @@ export default function NovoEventoPage() {
         />
         <Field label="Local" name="location" required />
         <Field label="Capacidade" name="capacity" type="number" defaultValue="6" required />
+        <div>
+          <label className="block text-sm font-medium text-slate-700">
+            Confirmação abre quantos dias antes?
+          </label>
+          <select
+            name="opensDaysBefore"
+            defaultValue="1"
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+            required
+          >
+            <option value="1">1 dia antes (mesmo horário do evento)</option>
+            <option value="2">2 dias antes (mesmo horário do evento)</option>
+          </select>
+        </div>
         <Field
-          label="Abrir confirmação (horas antes)"
-          name="opensHoursBefore"
-          type="number"
-          defaultValue="48"
-          required
-        />
-        <Field
-          label="Fechar confirmação (horas antes)"
-          name="closesHoursBefore"
-          type="number"
-          defaultValue="12"
+          label="Prazo para confirmar (dia anterior ao evento)"
+          name="closesAtTime"
+          type="time"
+          defaultValue="20:00"
           required
         />
         <Field
