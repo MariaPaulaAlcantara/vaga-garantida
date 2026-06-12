@@ -155,7 +155,10 @@ export class EventsService {
         participants,
       });
     } catch (err) {
-      this.logger.error('Falha ao avisar participantes sobre nova aula', err);
+      this.logger.error(
+        'Falha inesperada ao avisar participantes sobre nova aula',
+        err,
+      );
     }
   }
 

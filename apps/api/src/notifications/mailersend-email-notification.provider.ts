@@ -33,6 +33,13 @@ export class MailerSendEmailNotificationProvider implements EmailNotificationPro
     if (!response.ok) {
       const body = await response.text();
       this.logger.error(`MailerSend erro ${response.status}: ${body}`);
+
+      if (body.includes('MS42225')) {
+        throw new Error(
+          'Limite de destinatários do trial MailerSend atingido. Verifique seu domínio e ative o plano Livre.',
+        );
+      }
+
       throw new Error(`Falha ao enviar email: ${response.status}`);
     }
 

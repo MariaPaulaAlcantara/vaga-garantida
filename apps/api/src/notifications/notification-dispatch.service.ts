@@ -84,16 +84,18 @@ export class NotificationDispatchService {
       <p><a href="${this.eventUrl(params.event.id)}" style="color: #059669;">Ver evento</a></p>
     `;
 
-    await this.sendSafe(
+    const sent = await this.sendSafe(
       params.user.email,
       subject,
       emailLayout('Atualização na lista de espera', body, this.appUrl),
     );
 
-    await this.prisma.eventRegistration.update({
-      where: { id: params.registrationId },
-      data: { lastNotifiedWaitlistPosition: params.position },
-    });
+    if (sent) {
+      await this.prisma.eventRegistration.update({
+        where: { id: params.registrationId },
+        data: { lastNotifiedWaitlistPosition: params.position },
+      });
+    }
   }
 
   async notifyConfirmationReminder(params: {
@@ -111,16 +113,18 @@ export class NotificationDispatchService {
       <p><a href="${this.eventUrl(params.event.id)}" style="color: #059669;">Confirmar presença</a></p>
     `;
 
-    await this.sendSafe(
+    const sent = await this.sendSafe(
       params.user.email,
       `Confirme sua presença: ${params.event.title}`,
       emailLayout('Hora de confirmar sua presença', body, this.appUrl),
     );
 
-    await this.prisma.eventRegistration.update({
-      where: { id: params.registrationId },
-      data: { confirmationReminderSentAt: new Date() },
-    });
+    if (sent) {
+      await this.prisma.eventRegistration.update({
+        where: { id: params.registrationId },
+        data: { confirmationReminderSentAt: new Date() },
+      });
+    }
   }
 
   async notifyNewEvent(params: {
@@ -136,11 +140,25 @@ export class NotificationDispatchService {
       <p><a href="${this.eventUrl(params.event.id)}" style="color: #059669;">Reservar vaga</a></p>
     `;
 
+    let sent = 0;
+    let failed = 0;
+
     for (const participant of params.participants) {
-      await this.sendSafe(
+      const ok = await this.sendSafe(
         participant.email,
         `Nova aula: ${params.event.title}`,
         emailLayout('Nova aula disponível', body, this.appUrl),
+      );
+      if (ok) {
+        sent++;
+      } else {
+        failed++;
+      }
+    }
+
+    if (failed > 0) {
+      this.logger.warn(
+        `Nova aula "${params.event.title}": ${sent} enviados, ${failed} falharam`,
       );
     }
   }
@@ -262,12 +280,17 @@ export class NotificationDispatchService {
     return `${this.appUrl}/eventos/${eventId}`;
   }
 
-  private async sendSafe(to: string, subject: string, html: string) {
+  private async sendSafe(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<boolean> {
     try {
       await this.email.sendEmail(to, subject, html);
+      return true;
     } catch (err) {
       this.logger.error(`Falha ao enviar email para ${to}: ${subject}`, err);
-      throw err;
+      return false;
     }
   }
 }
