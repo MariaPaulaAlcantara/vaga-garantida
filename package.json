@@ -17,7 +17,9 @@
     "start:api": "node apps/api/dist/main.js",
     "db:generate": "npm run generate -w @vaga-garantida/database",
     "db:migrate": "npm run migrate -w @vaga-garantida/database",
+    "db:migrate:deploy": "npm run migrate:deploy -w @vaga-garantida/database",
     "db:seed": "npm run seed -w @vaga-garantida/database",
+    "start:api:prod": "npm run db:migrate:deploy && node apps/api/dist/main.js",
     "db:studio": "npm run studio -w @vaga-garantida/database"
   },
   "devDependencies": {

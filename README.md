@@ -140,10 +140,12 @@ npm install && npm run build:api
 ### Start Command
 
 ```bash
-node apps/api/dist/main.js
+npm run start:api:prod
 ```
 
-Execute a partir da raiz do repositório. Não use `node dist/main` na raiz — o build da API fica em `apps/api/dist/`.
+Isso executa `prisma migrate deploy` (aplica migrations pendentes) e depois sobe a API. Execute a partir da raiz do repositório.
+
+**Importante:** o serviço da API precisa da variável `DATABASE_URL` apontando para o mesmo PostgreSQL usado em produção.
 
 ### Variáveis de ambiente
 
