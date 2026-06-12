@@ -48,10 +48,38 @@ Criar uma solução que permita:
 * Visualizar lista de espera.
 * Gerenciar reservas.
 
+## Notificações por email
+
+A API envia emails automaticamente nos seguintes casos:
+
+* **Lista de espera** — ao entrar na fila ou avançar de posição.
+* **Vaga liberada** — ao sair da fila e precisar confirmar presença.
+* **Lembrete de confirmação** — quando abre a janela para confirmar presença.
+* **Nova aula** — quando a organizadora publica um evento (`publish: true`).
+
+Sem `MAILERSEND_API_TOKEN`, os emails aparecem nos logs da API como `[MOCK EMAIL]` (ideal para desenvolvimento).
+
+### MailerSend (piloto / produção)
+
+1. Crie conta em [mailersend.com](https://www.mailersend.com).
+2. **Trial** (domínio `mlsender.net`): até 100 emails para 2 destinatários — só para teste inicial.
+3. Para piloto com várias pessoas: verifique seu domínio no MailerSend e ative o plano **Livre** (500 emails/mês).
+4. Crie um **API token** com permissão de envio de email.
+5. No `.env` da API (ou Railway):
+
+| Variável | Obrigatória | Exemplo |
+|----------|-------------|---------|
+| `MAILERSEND_API_TOKEN` | Sim (email real) | `mlsn.xxxxxxxx` |
+| `EMAIL_FROM` | Sim (email real) | `Vaga Garantida <noreply@seudominio.com>` |
+| `APP_URL` | Não | `https://seu-app.vercel.app` (links nos emails) |
+
+6. Reinicie a API.
+
+O remetente (`EMAIL_FROM`) deve usar um domínio verificado no MailerSend.
+
 ## Funcionalidades futuras
 
 * Check-in automático.
-* Confirmação de presença antes do evento.
 * Notificações por WhatsApp.
 * Sistema de pontuação e reputação.
 * Estatísticas de participação.
@@ -161,8 +189,13 @@ Isso executa `prisma migrate deploy` (aplica migrations pendentes) e depois sobe
 | `TWILIO_ACCOUNT_SID` | Sim (SMS) | `ACxxxxxxxx` |
 | `TWILIO_AUTH_TOKEN` | Sim (SMS) | token do Twilio |
 | `TWILIO_PHONE_NUMBER` | Sim (SMS) | `+15551234567` (formato E.164) |
+| `MAILERSEND_API_TOKEN` | Sim (email) | `mlsn.xxxxxxxx` |
+| `EMAIL_FROM` | Sim (email) | `Vaga Garantida <noreply@seudominio.com>` |
+| `APP_URL` | Não | URL do frontend (links nos emails) |
 
 Com as três variáveis Twilio preenchidas, o OTP é enviado por **SMS**. Sem elas, em dev usa `OTP_MOCK_CODE`; em produção o código aparece nos logs (`[MOCK OTP]`).
+
+Com `MAILERSEND_API_TOKEN` e `EMAIL_FROM`, as notificações são enviadas por **email**. Sem elas, aparecem nos logs (`[MOCK EMAIL]`).
 
 Railway define `PORT` automaticamente; a API escuta em `0.0.0.0`.
 

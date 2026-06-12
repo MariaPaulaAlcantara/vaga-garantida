@@ -19,4 +19,16 @@ export class ConfirmationScheduler {
       );
     }
   }
+
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async handleConfirmationReminders() {
+    const result =
+      await this.registrationsService.processConfirmationReminders();
+
+    if (result.sent > 0) {
+      this.logger.log(
+        `Enviados ${result.sent} lembretes de confirmação`,
+      );
+    }
+  }
 }

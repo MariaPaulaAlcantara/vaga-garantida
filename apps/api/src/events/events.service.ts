@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -9,6 +10,7 @@ import {
   RegistrationStatus,
   User,
 } from '@vaga-garantida/database';
+import { NotificationDispatchService } from '../notifications/notification-dispatch.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { toConfirmationWindowDto } from '../registrations/confirmation-window.util';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -21,7 +23,12 @@ const ACTIVE_SPOT_STATUSES: RegistrationStatus[] = [
 
 @Injectable()
 export class EventsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(EventsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationDispatchService,
+  ) {}
 
   async findAllPublic() {
     const events = await this.prisma.event.findMany({
@@ -112,10 +119,44 @@ export class EventsService {
       include: { policy: true },
     });
 
-    return this.mapEventWithAvailability({
+    const mapped = this.mapEventWithAvailability({
       ...event,
       _count: { registrations: 0 },
     });
+
+    if (dto.publish) {
+      void this.notifyParticipantsAboutNewEvent(organizer, event);
+    }
+
+    return mapped;
+  }
+
+  private async notifyParticipantsAboutNewEvent(
+    organizer: User,
+    event: {
+      id: string;
+      title: string;
+      description: string;
+      startsAt: Date;
+      location: string;
+    },
+  ) {
+    try {
+      const participants =
+        await this.notifications.findParticipantsForNewEvent(organizer.id);
+
+      if (participants.length === 0) {
+        return;
+      }
+
+      await this.notifications.notifyNewEvent({
+        event,
+        organizerName: organizer.name,
+        participants,
+      });
+    } catch (err) {
+      this.logger.error('Falha ao avisar participantes sobre nova aula', err);
+    }
   }
 
   async update(organizer: User, id: string, dto: UpdateEventDto) {

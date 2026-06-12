@@ -80,10 +80,12 @@ model EventRegistration {
   waitlistPosition     Int?
   joinedAt             DateTime           @default(now())
   confirmedAt          DateTime?
-  confirmationDeadline DateTime?
-  cancelledAt          DateTime?
-  attendedAt           DateTime?
-  updatedAt            DateTime           @updatedAt
+  confirmationDeadline         DateTime?
+  confirmationReminderSentAt   DateTime?
+  lastNotifiedWaitlistPosition Int?
+  cancelledAt                  DateTime?
+  attendedAt                   DateTime?
+  updatedAt                    DateTime           @updatedAt
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

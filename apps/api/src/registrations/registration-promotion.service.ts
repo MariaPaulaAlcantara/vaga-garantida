@@ -16,6 +16,31 @@ const ACTIVE_SPOT_STATUSES: RegistrationStatus[] = [
   RegistrationStatus.CONFIRMED,
 ];
 
+export type WaitlistPositionChange = {
+  registrationId: string;
+  userId: string;
+  newPosition: number;
+  previousPosition: number;
+};
+
+export type PromotedRegistration = {
+  id: string;
+  userId: string;
+  confirmationDeadline: Date | null;
+  user: { email: string; name: string };
+  event: {
+    id: string;
+    title: string;
+    startsAt: Date;
+    location: string;
+  };
+};
+
+export type PromotionResult = {
+  promoted: PromotedRegistration;
+  waitlistChanges: WaitlistPositionChange[];
+};
+
 @Injectable()
 export class RegistrationPromotionService {
   constructor(private readonly prisma: PrismaService) {}
@@ -51,7 +76,7 @@ export class RegistrationPromotionService {
     tx: Prisma.TransactionClient,
     eventId: string,
     promoted = true,
-  ) {
+  ): Promise<PromotionResult | null> {
     const event = await tx.event.findUniqueOrThrow({
       where: { id: eventId },
       include: { policy: true },
@@ -87,27 +112,55 @@ export class RegistrationPromotionService {
         status: RegistrationStatus.RESERVED,
         waitlistPosition: null,
         confirmationDeadline: deadline,
+        lastNotifiedWaitlistPosition: null,
       },
-      include: { user: true },
+      include: {
+        user: { select: { email: true, name: true } },
+        event: {
+          select: { id: true, title: true, startsAt: true, location: true },
+        },
+      },
     });
 
-    await this.reindexWaitlist(tx, eventId);
+    const waitlistChanges = await this.reindexWaitlist(tx, eventId);
 
-    return promotedRegistration;
+    return { promoted: promotedRegistration, waitlistChanges };
   }
 
-  async reindexWaitlist(tx: Prisma.TransactionClient, eventId: string) {
+  async reindexWaitlist(
+    tx: Prisma.TransactionClient,
+    eventId: string,
+  ): Promise<WaitlistPositionChange[]> {
     const waitlist = await tx.eventRegistration.findMany({
       where: { eventId, status: RegistrationStatus.WAITLIST },
       orderBy: [{ waitlistPosition: 'asc' }, { joinedAt: 'asc' }],
     });
 
+    const changes: WaitlistPositionChange[] = [];
+
     for (let i = 0; i < waitlist.length; i++) {
+      const newPosition = i + 1;
+      const previousPosition = waitlist[i].waitlistPosition;
+
+      if (
+        previousPosition !== null &&
+        newPosition < previousPosition
+      ) {
+        changes.push({
+          registrationId: waitlist[i].id,
+          userId: waitlist[i].userId,
+          newPosition,
+          previousPosition,
+        });
+      }
+
       await tx.eventRegistration.update({
         where: { id: waitlist[i].id },
-        data: { waitlistPosition: i + 1 },
+        data: { waitlistPosition: newPosition },
       });
     }
+
+    return changes;
   }
 
   async releaseSpotAndPromote(

@@ -2,14 +2,15 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
   EventStatus,
   RegistrationStatus,
   User,
-  UserRole,
 } from '@vaga-garantida/database';
+import { NotificationDispatchService } from '../notifications/notification-dispatch.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   getConfirmationWindow,
@@ -26,13 +27,16 @@ const ACTIVE_STATUSES: RegistrationStatus[] = [
 
 @Injectable()
 export class RegistrationsService {
+  private readonly logger = new Logger(RegistrationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly promotion: RegistrationPromotionService,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async register(userId: string, eventId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const event = await tx.event.findUnique({
         where: { id: eventId },
         include: { policy: true },
@@ -75,7 +79,10 @@ export class RegistrationsService {
             confirmationDeadline: deadline,
           },
           include: {
-            event: { select: { title: true, startsAt: true } },
+            event: {
+              select: { id: true, title: true, startsAt: true },
+            },
+            user: { select: { email: true, name: true } },
           },
         });
       }
@@ -92,14 +99,32 @@ export class RegistrationsService {
           waitlistPosition: waitlistCount + 1,
         },
         include: {
-          event: { select: { title: true, startsAt: true } },
+          event: {
+            select: { id: true, title: true, startsAt: true },
+          },
+          user: { select: { email: true, name: true } },
         },
       });
     });
+
+    if (result.status === RegistrationStatus.WAITLIST && result.waitlistPosition) {
+      void this.notifications
+        .notifyWaitlistPosition({
+          registrationId: result.id,
+          user: result.user,
+          event: result.event,
+          position: result.waitlistPosition,
+        })
+        .catch((err) =>
+          this.logger.error('Falha ao avisar entrada na lista de espera', err),
+        );
+    }
+
+    return result;
   }
 
   async cancel(userId: string, registrationId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    const outcome = await this.prisma.$transaction(async (tx) => {
       const registration = await tx.eventRegistration.findUnique({
         where: { id: registrationId },
         include: { event: true },
@@ -130,26 +155,47 @@ export class RegistrationsService {
         },
       });
 
+      let waitlistChanges: Awaited<
+        ReturnType<RegistrationPromotionService['reindexWaitlist']>
+      > = [];
+
       if (registration.status === RegistrationStatus.WAITLIST) {
-        await this.promotion.reindexWaitlist(tx, registration.eventId);
+        waitlistChanges = await this.promotion.reindexWaitlist(
+          tx,
+          registration.eventId,
+        );
       }
 
-      let promoted = null;
+      let promotionResult = null;
       if (wasOccupyingSpot) {
-        promoted = await this.promotion.promoteNextInWaitlist(
+        promotionResult = await this.promotion.promoteNextInWaitlist(
           tx,
           registration.eventId,
           true,
         );
+        if (promotionResult) {
+          waitlistChanges = [
+            ...waitlistChanges,
+            ...promotionResult.waitlistChanges,
+          ];
+        }
       }
 
       return {
-        message: 'Inscrição cancelada',
-        promoted: promoted
-          ? { id: promoted.id, userId: promoted.userId }
-          : null,
+        eventId: registration.eventId,
+        promoted: promotionResult?.promoted ?? null,
+        waitlistChanges,
       };
     });
+
+    void this.dispatchPromotionNotifications(outcome);
+
+    return {
+      message: 'Inscrição cancelada',
+      promoted: outcome.promoted
+        ? { id: outcome.promoted.id, userId: outcome.promoted.userId }
+        : null,
+    };
   }
 
   async confirm(userId: string, registrationId: string) {
@@ -325,24 +371,77 @@ export class RegistrationsService {
     const results = [];
 
     for (const registration of expired) {
-      const result = await this.prisma.$transaction(async (tx) => {
+      const outcome = await this.prisma.$transaction(async (tx) => {
         await tx.eventRegistration.update({
           where: { id: registration.id },
           data: { status: RegistrationStatus.EXPIRED },
         });
 
-        const promoted = await this.promotion.promoteNextInWaitlist(
+        const promotionResult = await this.promotion.promoteNextInWaitlist(
           tx,
           registration.eventId,
           true,
         );
 
-        return { expiredId: registration.id, promotedId: promoted?.id ?? null };
+        return {
+          expiredId: registration.id,
+          eventId: registration.eventId,
+          promoted: promotionResult?.promoted ?? null,
+          waitlistChanges: promotionResult?.waitlistChanges ?? [],
+        };
       });
 
-      results.push(result);
+      void this.dispatchPromotionNotifications(outcome);
+      results.push({
+        expiredId: outcome.expiredId,
+        promotedId: outcome.promoted?.id ?? null,
+      });
     }
 
     return { processed: results.length, results };
+  }
+
+  async processConfirmationReminders() {
+    return this.notifications.processConfirmationReminders();
+  }
+
+  private dispatchPromotionNotifications(outcome: {
+    eventId: string;
+    promoted: {
+      user: { email: string; name: string };
+      event: {
+        id: string;
+        title: string;
+        startsAt: Date;
+        location: string;
+      };
+      confirmationDeadline: Date | null;
+    } | null;
+    waitlistChanges: Array<{
+      registrationId: string;
+      userId: string;
+      newPosition: number;
+      previousPosition: number;
+    }>;
+  }) {
+    if (outcome.promoted) {
+      this.notifications
+        .notifyPromoted({
+          user: outcome.promoted.user,
+          event: outcome.promoted.event,
+          confirmationDeadline: outcome.promoted.confirmationDeadline,
+        })
+        .catch((err) =>
+          this.logger.error('Falha ao avisar promoção da lista de espera', err),
+        );
+    }
+
+    if (outcome.waitlistChanges.length > 0) {
+      this.notifications
+        .handleWaitlistPositionChanges(outcome.eventId, outcome.waitlistChanges)
+        .catch((err) =>
+          this.logger.error('Falha ao avisar mudança na lista de espera', err),
+        );
+    }
   }
 }
