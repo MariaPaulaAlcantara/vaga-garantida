@@ -125,6 +125,8 @@ Use **dois serviços** no mesmo repositório, ambos com **Root Directory vazio**
 
 No painel de cada serviço: **Settings → Config-as-code** → informe o arquivo correto.
 
+Se um deploy aparecer como **Skipped** ("No changes to watched files"), use **Redeploy** no último deploy bem-sucedido ou confira os `watchPatterns` em [`railway.toml`](railway.toml) (inclui `packages/database/**` e `package.json`).
+
 **Networking:** aponte o domínio público para a porta que o Railway injeta (`PORT`, em geral `8080`) — a mesma nos logs de deploy.
 
 ### API (`railway.toml`)

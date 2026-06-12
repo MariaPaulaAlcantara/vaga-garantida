@@ -32,7 +32,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
   await app.listen(port, '0.0.0.0');
-  console.log(`API rodando em http://0.0.0.0:${port}`);
+  console.log(`API rodando em http://0.0.0.0:${port} (migrations aplicadas no start)`);
   console.log(`Swagger em http://0.0.0.0:${port}/docs`);
 }
 

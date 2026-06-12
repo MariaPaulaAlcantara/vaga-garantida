@@ -1,6 +1,13 @@
 [build]
 builder = "nixpacks"
 buildCommand = "npm install && npm run build:api"
+watchPatterns = [
+  "apps/api/**",
+  "packages/database/**",
+  "package.json",
+  "package-lock.json",
+  "railway.toml",
+]
 
 [build.env]
 NIXPACKS_NODE_VERSION = "20"
