@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -32,8 +33,14 @@ export class EventsController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.ORGANIZER)
   @Get('organizer/mine')
-  findMine(@CurrentUser() user: User) {
-    return this.eventsService.findAllForOrganizer(user.id);
+  findMine(
+    @CurrentUser() user: User,
+    @Query('scope') scope?: 'upcoming' | 'completed',
+  ) {
+    return this.eventsService.findAllForOrganizer(
+      user.id,
+      scope === 'completed' ? 'completed' : 'upcoming',
+    );
   }
 
   @Get(':id')
@@ -64,8 +71,16 @@ export class EventsController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.ORGANIZER)
-  @Delete(':id')
+  @Patch(':id/cancel')
   cancel(@CurrentUser() user: User, @Param('id') id: string) {
     return this.eventsService.cancel(user, id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ORGANIZER)
+  @Delete(':id')
+  remove(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.eventsService.remove(user, id);
   }
 }

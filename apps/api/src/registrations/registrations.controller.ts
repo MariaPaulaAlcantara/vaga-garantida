@@ -31,17 +31,17 @@ export class RegistrationsController {
 
   @Post('events/:eventId')
   register(@CurrentUser() user: User, @Param('eventId') eventId: string) {
-    return this.registrationsService.register(user.id, eventId);
+    return this.registrationsService.register(user, eventId);
   }
 
   @Delete(':id')
   cancel(@CurrentUser() user: User, @Param('id') id: string) {
-    return this.registrationsService.cancel(user.id, id);
+    return this.registrationsService.cancel(user, id);
   }
 
   @Patch(':id/confirm')
   confirm(@CurrentUser() user: User, @Param('id') id: string) {
-    return this.registrationsService.confirm(user.id, id);
+    return this.registrationsService.confirm(user, id);
   }
 
   @UseGuards(RolesGuard)

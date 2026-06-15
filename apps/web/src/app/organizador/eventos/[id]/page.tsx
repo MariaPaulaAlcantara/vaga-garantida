@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, Event, GroupedRegistrations, Registration } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { formatDate, formatStatus, statusColor } from '@/lib/format';
+import { formatDate, formatPhone, formatStatus, statusColor } from '@/lib/format';
 
 export default function OrganizadorEventoPage() {
   const { id } = useParams<{ id: string }>();
@@ -59,7 +59,7 @@ export default function OrganizadorEventoPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/organizador" className="text-sm text-emerald-700 hover:underline">
+      <Link href="/organizador" className="text-sm text-brand hover:underline">
         ← Voltar ao painel
       </Link>
 
@@ -131,7 +131,9 @@ function RegistrationSection({
             <li key={reg.id} className="flex items-center justify-between py-3">
               <div>
                 <p className="font-medium text-slate-900">{reg.user?.name}</p>
-                <p className="text-sm text-slate-500">{reg.user?.phone}</p>
+                <p className="text-sm text-slate-500">
+                  {reg.user?.phone ? formatPhone(reg.user.phone) : ''}
+                </p>
                 {showPosition && reg.waitlistPosition && (
                   <p className="text-sm text-blue-600">
                     Posição {reg.waitlistPosition}
@@ -149,7 +151,7 @@ function RegistrationSection({
                     <button
                       onClick={() => onAttendance(reg.id, true)}
                       disabled={actionId === reg.id}
-                      className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
+                      className="rounded-lg bg-brand px-2.5 py-1 text-xs text-white hover:bg-brand-dark disabled:opacity-50"
                     >
                       Presente
                     </button>

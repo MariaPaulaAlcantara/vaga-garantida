@@ -74,9 +74,34 @@ export class EventsService {
     return this.mapEventWithAvailability(event);
   }
 
-  async findAllForOrganizer(organizerId: string) {
+  async findAllForOrganizer(
+    organizerId: string,
+    scope: 'upcoming' | 'completed' = 'upcoming',
+  ) {
+    const now = new Date();
+
+    const where =
+      scope === 'upcoming'
+        ? {
+            organizerId,
+            status: {
+              in: [EventStatus.DRAFT, EventStatus.OPEN, EventStatus.CLOSED],
+            },
+            startsAt: { gte: now },
+          }
+        : {
+            organizerId,
+            OR: [
+              { status: { in: [EventStatus.COMPLETED, EventStatus.CANCELLED] } },
+              {
+                status: { in: [EventStatus.OPEN, EventStatus.CLOSED] },
+                startsAt: { lt: now },
+              },
+            ],
+          };
+
     const events = await this.prisma.event.findMany({
-      where: { organizerId },
+      where,
       include: {
         policy: true,
         _count: {
@@ -87,10 +112,23 @@ export class EventsService {
           },
         },
       },
-      orderBy: { startsAt: 'desc' },
+      orderBy: { startsAt: scope === 'upcoming' ? 'asc' : 'desc' },
     });
 
     return events.map((event) => this.mapEventWithAvailability(event));
+  }
+
+  async processCompletedEvents() {
+    const now = new Date();
+    const result = await this.prisma.event.updateMany({
+      where: {
+        status: { in: [EventStatus.OPEN, EventStatus.CLOSED] },
+        startsAt: { lt: now },
+      },
+      data: { status: EventStatus.COMPLETED },
+    });
+
+    return { completed: result.count };
   }
 
   async create(organizer: User, dto: CreateEventDto) {
@@ -216,7 +254,17 @@ export class EventsService {
   }
 
   async cancel(organizer: User, id: string) {
-    await this.getOrganizerEvent(organizer.id, id);
+    const event = await this.getOrganizerEvent(organizer.id, id);
+
+    if (event.status === EventStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Aulas concluídas não podem ser canceladas',
+      );
+    }
+
+    if (event.status === EventStatus.CANCELLED) {
+      throw new BadRequestException('Esta aula já está cancelada');
+    }
 
     await this.prisma.event.update({
       where: { id },
@@ -240,7 +288,34 @@ export class EventsService {
       },
     });
 
-    return { message: 'Evento cancelado' };
+    return { message: 'Aula cancelada' };
+  }
+
+  async remove(organizer: User, id: string) {
+    const event = await this.getOrganizerEvent(organizer.id, id);
+
+    if (event.status === EventStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Aulas concluídas não podem ser excluídas',
+      );
+    }
+
+    const registrationCount = await this.prisma.eventRegistration.count({
+      where: { eventId: id },
+    });
+
+    const canHardDelete =
+      event.status === EventStatus.DRAFT || registrationCount === 0;
+
+    if (!canHardDelete) {
+      throw new BadRequestException(
+        'Aulas publicadas com inscrições devem ser canceladas, não excluídas',
+      );
+    }
+
+    await this.prisma.event.delete({ where: { id } });
+
+    return { message: 'Aula excluída' };
   }
 
   private async getOrganizerEvent(organizerId: string, eventId: string) {
@@ -270,9 +345,11 @@ export class EventsService {
     const occupiedSpots = event._count.registrations;
     const availableSpots = Math.max(0, event.capacity - occupiedSpots);
 
-    let availabilityStatus: 'open' | 'full' | 'closed' | 'cancelled';
+    let availabilityStatus: 'open' | 'full' | 'closed' | 'cancelled' | 'completed';
     if (event.status === EventStatus.CANCELLED) {
       availabilityStatus = 'cancelled';
+    } else if (event.status === EventStatus.COMPLETED) {
+      availabilityStatus = 'completed';
     } else if (event.status === EventStatus.CLOSED) {
       availabilityStatus = 'closed';
     } else if (availableSpots === 0) {

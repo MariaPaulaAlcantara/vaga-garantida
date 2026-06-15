@@ -55,7 +55,7 @@ export default function NovoEventoPage() {
     <div>
       <Link
         href="/organizador"
-        className="text-sm text-emerald-700 hover:underline"
+        className="text-sm text-brand hover:underline"
       >
         ← Voltar
       </Link>
@@ -117,7 +117,7 @@ export default function NovoEventoPage() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-emerald-600 px-4 py-2.5 text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="rounded-lg bg-brand px-4 py-2.5 text-white hover:bg-brand-dark disabled:opacity-50"
         >
           {loading ? 'Criando...' : 'Criar evento'}
         </button>

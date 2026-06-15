@@ -40,7 +40,7 @@ export default function AlunoPage() {
         <h1 className="text-2xl font-bold text-slate-900">Minhas aulas</h1>
         <Link
           href="/professor/nova-aula"
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700"
+          className="rounded-lg bg-brand px-4 py-2 text-sm text-white hover:bg-brand-dark"
         >
           Cadastrar nova aula
         </Link>
@@ -52,7 +52,7 @@ export default function AlunoPage() {
         {events.length === 0 ? (
           <p className="text-slate-500">
             Nenhuma aula cadastrada ainda.{' '}
-            <Link href="/professor/nova-aula" className="text-emerald-700 hover:underline">
+            <Link href="/professor/nova-aula" className="text-brand hover:underline">
               Cadastre sua primeira aula
             </Link>
           </p>
@@ -61,7 +61,7 @@ export default function AlunoPage() {
             <Link
               key={event.id}
               href={`/professor/aulas/${event.id}`}
-              className="block rounded-xl border border-slate-200 bg-white p-5 hover:border-emerald-300"
+              className="block rounded-xl border border-slate-200 bg-white p-5 hover:border-brand-border"
             >
               <h2 className="font-semibold text-slate-900">{event.title}</h2>
               <p className="mt-1 text-sm text-slate-500">

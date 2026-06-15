@@ -2,21 +2,24 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
+import { RequireOrganizer } from '@/components/RoleGuard';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 export default function NovaAulaPage() {
+  return (
+    <RequireOrganizer>
+      <NovaAulaContent />
+    </RequireOrganizer>
+  );
+}
+
+function NovaAulaContent() {
   const router = useRouter();
-  const { user, token, isLoading: authLoading } = useAuth();
+  const { token } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && (!token || user?.role !== 'ORGANIZER')) {
-      router.push('/professor/cadastro');
-    }
-  }, [authLoading, token, user, router]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -54,15 +57,11 @@ export default function NovaAulaPage() {
   defaultDate.setDate(defaultDate.getDate() + 7);
   const defaultDateStr = defaultDate.toISOString().slice(0, 10);
 
-  if (authLoading) {
-    return <p className="text-slate-500">Carregando...</p>;
-  }
-
   return (
     <div>
       <Link
         href="/professor"
-        className="text-sm text-emerald-700 hover:underline"
+        className="text-sm text-brand hover:underline"
       >
         ← Voltar
       </Link>
@@ -133,7 +132,7 @@ export default function NovaAulaPage() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-emerald-600 px-4 py-2.5 text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="rounded-lg bg-brand px-4 py-2.5 text-white hover:bg-brand-dark disabled:opacity-50"
         >
           {loading ? 'Cadastrando...' : 'Cadastrar aula'}
         </button>

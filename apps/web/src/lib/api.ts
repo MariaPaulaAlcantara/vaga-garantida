@@ -71,6 +71,12 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
+  loginOrganizer: (email: string, password: string) =>
+    request<{ accessToken: string; user: AuthUser }>('/auth/login/organizer', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+
   requestOtp: (phone: string) =>
     request<{ message: string }>('/auth/otp/request', {
       method: 'POST',
@@ -115,8 +121,21 @@ export const api = {
       method: 'PATCH',
     }, token),
 
-  getOrganizerEvents: (token: string) =>
-    request<Event[]>('/events/organizer/mine', {}, token),
+  getOrganizerEvents: (
+    token: string,
+    scope: 'upcoming' | 'completed' = 'upcoming',
+  ) =>
+    request<Event[]>(`/events/organizer/mine?scope=${scope}`, {}, token),
+
+  cancelEvent: (eventId: string, token: string) =>
+    request<{ message: string }>(`/events/${eventId}/cancel`, {
+      method: 'PATCH',
+    }, token),
+
+  deleteEvent: (eventId: string, token: string) =>
+    request<{ message: string }>(`/events/${eventId}`, {
+      method: 'DELETE',
+    }, token),
 
   createEvent: (token: string, data: CreateEventInput) =>
     request<Event>('/events', {
@@ -151,7 +170,7 @@ export interface Event {
   status: string;
   occupiedSpots: number;
   availableSpots: number;
-  availabilityStatus: 'open' | 'full' | 'closed' | 'cancelled';
+  availabilityStatus: 'open' | 'full' | 'closed' | 'cancelled' | 'completed';
   policy?: {
     opensDaysBefore: number;
     closesAtTime: string;
@@ -189,6 +208,15 @@ export interface GroupedRegistrations {
   attended: Registration[];
   noShow: Registration[];
   cancelled: Registration[];
+  summary: {
+    confirmed: number;
+    reserved: number;
+    waitlist: number;
+    attended: number;
+    noShow: number;
+    cancelled: number;
+    total: number;
+  };
 }
 
 export interface CreateEventInput {

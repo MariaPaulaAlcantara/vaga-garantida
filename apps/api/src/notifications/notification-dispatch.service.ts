@@ -12,7 +12,13 @@ import {
   EMAIL_NOTIFICATION_PROVIDER,
   EmailNotificationProvider,
 } from './email-notification.interface';
-import { emailLayout, formatEventDate } from './email-format.util';
+import {
+  buildEventUrl,
+  emailLayout,
+  escapeHtml,
+  formatEventDate,
+  resolveWebAppUrl,
+} from './email-format.util';
 
 @Injectable()
 export class NotificationDispatchService {
@@ -25,10 +31,8 @@ export class NotificationDispatchService {
     @Inject(EMAIL_NOTIFICATION_PROVIDER)
     private readonly email: EmailNotificationProvider,
   ) {
-    this.appUrl =
-      this.config.get<string>('APP_URL') ??
-      this.config.get<string>('CORS_ORIGIN') ??
-      'http://localhost:3000';
+    this.appUrl = resolveWebAppUrl(this.config);
+    this.logger.log(`Links de email apontam para: ${this.appUrl}`);
   }
 
   async notifyPromoted(params: {
@@ -36,23 +40,32 @@ export class NotificationDispatchService {
     event: Pick<Event, 'id' | 'title' | 'startsAt' | 'location'>;
     confirmationDeadline: Date | null;
   }) {
+    const eventLink = buildEventUrl(this.appUrl, params.event.id);
     const deadlineText = params.confirmationDeadline
       ? formatEventDate(params.confirmationDeadline)
       : 'o prazo indicado no app';
 
     const body = `
-      <p>Olá, ${params.user.name}!</p>
-      <p>Uma vaga foi liberada e você saiu da lista de espera.</p>
-      <p><strong>${params.event.title}</strong><br>
-      ${formatEventDate(params.event.startsAt)} — ${params.event.location}</p>
-      <p>Confirme sua presença até <strong>${deadlineText}</strong> para garantir a vaga.</p>
-      <p><a href="${this.eventUrl(params.event.id)}" style="color: #059669;">Confirmar presença</a></p>
+      <p style="margin: 0 0 16px;">Olá, <strong>${escapeHtml(params.user.name)}</strong>!</p>
+      <p style="margin: 0 0 16px;">Uma vaga foi liberada e você saiu da lista de espera.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin: 0 0 16px; background-color: #F3EEFF; border: 1px solid #D4B8FF; border-radius: 12px;">
+        <tr>
+          <td style="padding: 16px;">
+            <p style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #111827;">${escapeHtml(params.event.title)}</p>
+            <p style="margin: 0; font-size: 14px; color: #6B7280;">${formatEventDate(params.event.startsAt)} — ${escapeHtml(params.event.location)}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0;">Confirme sua presença até <strong>${deadlineText}</strong> para garantir a vaga.</p>
     `;
 
     await this.sendSafe(
       params.user.email,
       `Vaga liberada: ${params.event.title}`,
-      emailLayout('Sua vaga foi liberada!', body, this.appUrl),
+      emailLayout('Sua vaga foi liberada!', body, this.appUrl, {
+        href: eventLink,
+        label: 'Confirmar presença',
+      }),
     );
   }
 
@@ -63,6 +76,7 @@ export class NotificationDispatchService {
     position: number;
     previousPosition?: number;
   }) {
+    const eventLink = buildEventUrl(this.appUrl, params.event.id);
     const advanced =
       params.previousPosition !== undefined &&
       params.position < params.previousPosition;
@@ -76,18 +90,26 @@ export class NotificationDispatchService {
       : `Você entrou na lista de espera na <strong>posição ${params.position}</strong>.`;
 
     const body = `
-      <p>Olá, ${params.user.name}!</p>
-      <p>${intro}</p>
-      <p><strong>${params.event.title}</strong><br>
-      ${formatEventDate(params.event.startsAt)}</p>
-      <p>Se uma vaga for liberada, você será avisado por email.</p>
-      <p><a href="${this.eventUrl(params.event.id)}" style="color: #059669;">Ver evento</a></p>
+      <p style="margin: 0 0 16px;">Olá, <strong>${escapeHtml(params.user.name)}</strong>!</p>
+      <p style="margin: 0 0 16px;">${intro}</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin: 0 0 16px; background-color: #F3EEFF; border: 1px solid #D4B8FF; border-radius: 12px;">
+        <tr>
+          <td style="padding: 16px;">
+            <p style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #111827;">${escapeHtml(params.event.title)}</p>
+            <p style="margin: 0; font-size: 14px; color: #6B7280;">${formatEventDate(params.event.startsAt)}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0;">Se uma vaga for liberada, você será avisado por e-mail.</p>
     `;
 
     const sent = await this.sendSafe(
       params.user.email,
       subject,
-      emailLayout('Atualização na lista de espera', body, this.appUrl),
+      emailLayout('Atualização na lista de espera', body, this.appUrl, {
+        href: eventLink,
+        label: 'Ver aula',
+      }),
     );
 
     if (sent) {
@@ -104,19 +126,29 @@ export class NotificationDispatchService {
     event: Pick<Event, 'id' | 'title' | 'startsAt' | 'location'>;
     deadline: Date;
   }) {
+    const eventLink = buildEventUrl(this.appUrl, params.event.id);
+
     const body = `
-      <p>Olá, ${params.user.name}!</p>
-      <p>Chegou o momento de confirmar se você vai participar.</p>
-      <p><strong>${params.event.title}</strong><br>
-      ${formatEventDate(params.event.startsAt)} — ${params.event.location}</p>
-      <p>Confirme até <strong>${formatEventDate(params.deadline)}</strong> para manter sua vaga.</p>
-      <p><a href="${this.eventUrl(params.event.id)}" style="color: #059669;">Confirmar presença</a></p>
+      <p style="margin: 0 0 16px;">Olá, <strong>${escapeHtml(params.user.name)}</strong>!</p>
+      <p style="margin: 0 0 16px;">Chegou o momento de confirmar se você vai participar.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin: 0 0 16px; background-color: #F3EEFF; border: 1px solid #D4B8FF; border-radius: 12px;">
+        <tr>
+          <td style="padding: 16px;">
+            <p style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #111827;">${escapeHtml(params.event.title)}</p>
+            <p style="margin: 0; font-size: 14px; color: #6B7280;">${formatEventDate(params.event.startsAt)} — ${escapeHtml(params.event.location)}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0;">Confirme até <strong>${formatEventDate(params.deadline)}</strong> para manter sua vaga.</p>
     `;
 
     const sent = await this.sendSafe(
       params.user.email,
       `Confirme sua presença: ${params.event.title}`,
-      emailLayout('Hora de confirmar sua presença', body, this.appUrl),
+      emailLayout('Hora de confirmar sua presença', body, this.appUrl, {
+        href: eventLink,
+        label: 'Confirmar presença',
+      }),
     );
 
     if (sent) {
@@ -132,22 +164,37 @@ export class NotificationDispatchService {
     organizerName: string;
     participants: Pick<User, 'id' | 'email' | 'name'>[];
   }) {
+    const eventLink = buildEventUrl(this.appUrl, params.event.id);
+
     const body = `
-      <p><strong>${params.organizerName}</strong> criou uma nova aula.</p>
-      <p><strong>${params.event.title}</strong><br>
-      ${formatEventDate(params.event.startsAt)} — ${params.event.location}</p>
-      <p>${params.event.description}</p>
-      <p><a href="${this.eventUrl(params.event.id)}" style="color: #059669;">Reservar vaga</a></p>
+      <p style="margin: 0 0 16px;"><strong>${escapeHtml(params.organizerName)}</strong> criou uma nova aula.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin: 0 0 16px; background-color: #F3EEFF; border: 1px solid #D4B8FF; border-radius: 12px;">
+        <tr>
+          <td style="padding: 16px;">
+            <p style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #111827;">${escapeHtml(params.event.title)}</p>
+            <p style="margin: 0 0 8px; font-size: 14px; color: #6B7280;">${formatEventDate(params.event.startsAt)} — ${escapeHtml(params.event.location)}</p>
+            <p style="margin: 0; font-size: 14px; color: #111827;">${escapeHtml(params.event.description)}</p>
+          </td>
+        </tr>
+      </table>
     `;
 
     let sent = 0;
     let failed = 0;
 
     for (const participant of params.participants) {
+      const personalizedBody = `
+        <p style="margin: 0 0 16px;">Olá, <strong>${escapeHtml(participant.name)}</strong>!</p>
+        ${body}
+      `;
+
       const ok = await this.sendSafe(
         participant.email,
         `Nova aula: ${params.event.title}`,
-        emailLayout('Nova aula disponível', body, this.appUrl),
+        emailLayout('Nova aula disponível', personalizedBody, this.appUrl, {
+          href: eventLink,
+          label: 'Reservar vaga',
+        }),
       );
       if (ok) {
         sent++;
@@ -274,10 +321,6 @@ export class NotificationDispatchService {
       },
       select: { id: true, email: true, name: true },
     });
-  }
-
-  private eventUrl(eventId: string) {
-    return `${this.appUrl}/eventos/${eventId}`;
   }
 
   private async sendSafe(
