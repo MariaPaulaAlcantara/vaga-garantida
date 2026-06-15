@@ -23,6 +23,14 @@
     "db:studio": "npm run studio -w @vaga-garantida/database"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^10.0.3",
+    "postcss": "8.5.15"
+  },
+  "overrides": {
+    "esbuild": "0.28.1",
+    "next": {
+      "postcss": "$postcss"
+    },
+    "shell-quote": "1.8.4"
   }
 }
