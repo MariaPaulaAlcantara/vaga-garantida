@@ -220,6 +220,82 @@ Variável obrigatória: `NEXT_PUBLIC_API_URL` = URL pública da API (sem barra n
 Build: `npm install && npm run build -w @vaga-garantida/web`  
 Start: `npm run start -w @vaga-garantida/web`
 
+### Domínios customizados (`vagagarantida.dev.br`)
+
+Estrutura recomendada:
+
+| URL | Serviço Railway | Repositório |
+|-----|-----------------|-------------|
+| `https://www.vagagarantida.dev.br` | Landing (site estático) | `vaga-garantida-site` |
+| `https://app.vagagarantida.dev.br` | Web (Next.js) | `vaga-garantida` |
+| `https://api.vagagarantida.dev.br` | API (NestJS) | `vaga-garantida` |
+
+#### Passo 1 — DNS (registro.br ou onde o domínio está)
+
+No painel DNS, crie **dois registros CNAME** (o Railway mostra o valor exato ao adicionar cada domínio):
+
+| Nome / host | Tipo | Valor (exemplo — use o que o Railway indicar) |
+|-------------|------|-----------------------------------------------|
+| `app` | CNAME | `xxxx.up.railway.app` |
+| `api` | CNAME | `yyyy.up.railway.app` |
+
+A landing (`www`) já deve estar apontando para o serviço do `vaga-garantida-site`.
+
+#### Passo 2 — Railway: domínio no serviço **Web**
+
+1. Abra o projeto no [Railway](https://railway.app)
+2. Clique no serviço **Web** (Next.js)
+3. **Settings** → **Networking** → **Custom Domain**
+4. Adicione: `app.vagagarantida.dev.br`
+5. Copie o CNAME e confira no DNS (Passo 1)
+6. Aguarde o certificado SSL ficar **Active** (pode levar alguns minutos)
+
+#### Passo 3 — Railway: domínio no serviço **API**
+
+1. Clique no serviço **API** (NestJS)
+2. **Settings** → **Networking** → **Custom Domain**
+3. Adicione: `api.vagagarantida.dev.br`
+4. Confira o CNAME no DNS
+5. Aguarde SSL **Active**
+
+#### Passo 4 — Variáveis no serviço **API**
+
+Em **Variables**, defina ou atualize:
+
+| Variável | Valor |
+|----------|-------|
+| `CORS_ORIGIN` | `https://app.vagagarantida.dev.br` |
+| `WEB_APP_URL` | `https://app.vagagarantida.dev.br` |
+| `APP_URL` | `https://app.vagagarantida.dev.br` |
+
+Salve e faça **Redeploy** da API.
+
+#### Passo 5 — Variáveis no serviço **Web**
+
+Em **Variables**, defina ou atualize:
+
+| Variável | Valor |
+|----------|-------|
+| `NEXT_PUBLIC_API_URL` | `https://api.vagagarantida.dev.br` |
+
+**Importante:** `NEXT_PUBLIC_*` entra no build do Next.js. Após alterar, é obrigatório **Redeploy** (não basta restart).
+
+#### Passo 6 — Landing page (`vaga-garantida-site`)
+
+Os botões e o menu **Entrar** devem apontar para `https://app.vagagarantida.dev.br` (não para `*.up.railway.app`).
+
+Após merge/deploy da landing, faça **Redeploy** do serviço do site.
+
+#### Passo 7 — Testar
+
+1. `https://www.vagagarantida.dev.br` → landing carrega
+2. **Ver eventos** → abre `https://app.vagagarantida.dev.br/eventos`
+3. **Entrar** → abre `https://app.vagagarantida.dev.br/login`
+4. Login e listagem de eventos funcionam (API em `api.vagagarantida.dev.br`)
+5. E-mail de confirmação contém link para `app.vagagarantida.dev.br/eventos/...`
+
+Se o app abrir mas as chamadas à API falharem (erro de CORS no console), confira `CORS_ORIGIN` na API e redeploy.
+
 ### Verificação local (produção)
 
 ```bash
