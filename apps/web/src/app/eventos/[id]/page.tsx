@@ -1,5 +1,7 @@
 'use client';
 
+import { ConfirmationWindowInfo } from '@/components/ConfirmationWindowInfo';
+import { RequireParticipant } from '@/components/RoleGuard';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -7,11 +9,18 @@ import { api, ApiError, Event, Registration } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import {
   canConfirmRegistration,
-  confirmationStatusMessage,
 } from '@/lib/confirmation';
 import { formatDate } from '@/lib/format';
 
 export default function EventoDetailPage() {
+  return (
+    <RequireParticipant>
+      <EventoDetailContent />
+    </RequireParticipant>
+  );
+}
+
+function EventoDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, token } = useAuth();
@@ -94,13 +103,10 @@ export default function EventoDetailPage() {
     myRegistration?.status ?? '',
     confirmationWindow,
   );
-  const confirmationMessage = myRegistration
-    ? confirmationStatusMessage(myRegistration.status, confirmationWindow)
-    : null;
 
   return (
     <div className="space-y-6">
-      <Link href="/eventos" className="text-sm text-emerald-700 hover:underline">
+      <Link href="/eventos" className="text-sm text-brand hover:underline">
         ← Voltar aos eventos
       </Link>
 
@@ -125,6 +131,15 @@ export default function EventoDetailPage() {
           </div>
         </dl>
 
+        {event.confirmationWindow && (
+          <div className="mt-4">
+            <h2 className="text-sm font-semibold text-slate-900">
+              Período para confirmar presença
+            </h2>
+            <ConfirmationWindowInfo window={event.confirmationWindow} />
+          </div>
+        )}
+
         {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
         <div className="mt-6 flex flex-wrap gap-3">
@@ -132,7 +147,7 @@ export default function EventoDetailPage() {
             <button
               onClick={handleRegister}
               disabled={actionLoading}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="rounded-lg bg-brand px-4 py-2 text-white hover:bg-brand-dark disabled:opacity-50"
             >
               {actionLoading
                 ? 'Processando...'
@@ -147,15 +162,12 @@ export default function EventoDetailPage() {
               <p className="text-sm text-slate-600">
                 Status: <strong>{statusLabel(myRegistration)}</strong>
               </p>
-              {confirmationMessage && (
-                <p className="text-sm text-amber-700">{confirmationMessage}</p>
-              )}
 
               {canConfirm && (
                 <button
                   onClick={handleConfirm}
                   disabled={actionLoading}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
+                  className="rounded-lg bg-brand px-4 py-2 text-white hover:bg-brand-dark disabled:opacity-50"
                 >
                   Confirmar presença
                 </button>
@@ -175,7 +187,7 @@ export default function EventoDetailPage() {
 
           {!user && (
             <p className="text-sm text-slate-500">
-              <Link href="/login" className="text-emerald-700 hover:underline">
+              <Link href="/login" className="text-brand hover:underline">
                 Entre
               </Link>{' '}
               para reservar sua vaga.

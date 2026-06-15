@@ -71,7 +71,7 @@ Sem `MAILERSEND_API_TOKEN`, os emails aparecem nos logs da API como `[MOCK EMAIL
 |----------|-------------|---------|
 | `MAILERSEND_API_TOKEN` | Sim (email real) | `mlsn.xxxxxxxx` |
 | `EMAIL_FROM` | Sim (email real) | `Vaga Garantida <noreply@seudominio.com>` |
-| `APP_URL` | Não | `https://seu-app.vercel.app` (links nos emails) |
+| `WEB_APP_URL` ou `APP_URL` | Não | URL pública do **app Next.js** (ex.: `https://app.vagagarantida.dev.br`). Links nos emails apontam para `/eventos/{id}`. |
 
 6. Reinicie a API.
 
@@ -191,7 +191,7 @@ Isso executa `prisma migrate deploy` (aplica migrations pendentes) e depois sobe
 | `TWILIO_PHONE_NUMBER` | Sim (SMS) | `+15551234567` (formato E.164) |
 | `MAILERSEND_API_TOKEN` | Sim (email) | `mlsn.xxxxxxxx` |
 | `EMAIL_FROM` | Sim (email) | `Vaga Garantida <noreply@seudominio.com>` |
-| `APP_URL` | Não | URL do frontend (links nos emails) |
+| `WEB_APP_URL` ou `APP_URL` | Não | URL pública do frontend Next.js (links nos emails) |
 
 Com as três variáveis Twilio preenchidas, o OTP é enviado por **SMS**. Sem elas, em dev usa `OTP_MOCK_CODE`; em produção o código aparece nos logs (`[MOCK OTP]`).
 

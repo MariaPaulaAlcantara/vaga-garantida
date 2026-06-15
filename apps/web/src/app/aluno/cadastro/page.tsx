@@ -3,8 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
+import { MIN_PASSWORD_LENGTH, PasswordInput } from '@/components/PasswordInput';
+import { PhoneInput } from '@/components/PhoneInput';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { stripPhoneDigits } from '@/lib/format';
 
 export default function CadastroAlunoPage() {
   const router = useRouter();
@@ -25,13 +28,19 @@ export default function CadastroAlunoPage() {
   async function handleRegister(e: FormEvent) {
     e.preventDefault();
     setError('');
+
+    if (senha.length < MIN_PASSWORD_LENGTH) {
+      setError(`A senha deve ter no mínimo ${MIN_PASSWORD_LENGTH} caracteres`);
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await api.register({
         name: nome.trim(),
         email,
         password: senha,
-        phone: phone.replace(/\D/g, ''),
+        phone: stripPhoneDigits(phone),
         registerAs: 'participant',
       });
       login(result.accessToken, result.user);
@@ -87,26 +96,23 @@ export default function CadastroAlunoPage() {
           <label className="block text-sm font-medium text-slate-700">
             Senha
           </label>
-          <input
-            type="password"
+          <PasswordInput
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
             placeholder="********"
-            minLength={8}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             required
           />
+          <p className="mt-1 text-xs text-slate-500">
+            Mínimo de {MIN_PASSWORD_LENGTH} caracteres
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700">
             Telefone
           </label>
-          <input
-            type="tel"
+          <PhoneInput
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="11999998888"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+            onChange={setPhone}
             required
           />
         </div>
@@ -114,7 +120,7 @@ export default function CadastroAlunoPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-emerald-600 py-2.5 text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-brand py-2.5 text-white hover:bg-brand-dark disabled:opacity-50"
         >
           {loading ? 'Cadastrando...' : 'Confirmar cadastro'}
         </button>
@@ -122,7 +128,7 @@ export default function CadastroAlunoPage() {
 
       <p className="mt-6 text-center text-sm text-slate-500">
         Já é cadastrado?{' '}
-        <Link href="/login" className="text-emerald-700 hover:underline">
+        <Link href="/login" className="text-brand hover:underline">
           Entrar aqui
         </Link>
       </p>

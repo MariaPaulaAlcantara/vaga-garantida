@@ -40,7 +40,7 @@ export default function OrganizadorPage() {
         <h1 className="text-2xl font-bold text-slate-900">Painel do organizador</h1>
         <Link
           href="/organizador/novo-evento"
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700"
+          className="rounded-lg bg-brand px-4 py-2 text-sm text-white hover:bg-brand-dark"
         >
           Novo evento
         </Link>
@@ -56,7 +56,7 @@ export default function OrganizadorPage() {
             <Link
               key={event.id}
               href={`/organizador/eventos/${event.id}`}
-              className="block rounded-xl border border-slate-200 bg-white p-5 hover:border-emerald-300"
+              className="block rounded-xl border border-slate-200 bg-white p-5 hover:border-brand-border"
             >
               <h2 className="font-semibold text-slate-900">{event.title}</h2>
               <p className="mt-1 text-sm text-slate-500">

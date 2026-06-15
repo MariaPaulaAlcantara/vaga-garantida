@@ -11,6 +11,16 @@ export function canConfirmRegistration(
   return status === 'RESERVED' && Boolean(window?.isOpen);
 }
 
+export function formatConfirmationDate(iso: string): string {
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function confirmationStatusMessage(
   status: string,
   window?: ConfirmationWindow | null,
@@ -24,22 +34,12 @@ export function confirmationStatusMessage(
   const closesAt = new Date(window.closesAt).getTime();
 
   if (now < opensAt) {
-    return `Confirmação abre em ${formatConfirmationDate(window.opensAt)}`;
+    return `A confirmação abre em ${formatConfirmationDate(window.opensAt)} e vai até ${formatConfirmationDate(window.closesAt)}`;
   }
 
   if (now <= closesAt) {
-    return `Confirme até ${formatConfirmationDate(window.closesAt)}`;
+    return `Confirme sua presença até ${formatConfirmationDate(window.closesAt)}`;
   }
 
   return 'Prazo de confirmação encerrado';
-}
-
-function formatConfirmationDate(iso: string): string {
-  return new Date(iso).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }

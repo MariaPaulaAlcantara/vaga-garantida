@@ -9,6 +9,7 @@ import {
   EventStatus,
   RegistrationStatus,
   User,
+  UserRole,
 } from '@vaga-garantida/database';
 import { NotificationDispatchService } from '../notifications/notification-dispatch.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,7 +36,17 @@ export class RegistrationsService {
     private readonly notifications: NotificationDispatchService,
   ) {}
 
-  async register(userId: string, eventId: string) {
+  private assertParticipant(user: User) {
+    if (user.role === UserRole.ORGANIZER) {
+      throw new ForbiddenException(
+        'Organizadores não podem se inscrever em aulas',
+      );
+    }
+  }
+
+  async register(user: User, eventId: string) {
+    this.assertParticipant(user);
+
     const result = await this.prisma.$transaction(async (tx) => {
       const event = await tx.event.findUnique({
         where: { id: eventId },
@@ -46,12 +57,18 @@ export class RegistrationsService {
         throw new NotFoundException('Evento não encontrado');
       }
 
+      if (event.organizerId === user.id) {
+        throw new ForbiddenException(
+          'Você não pode se inscrever na sua própria aula',
+        );
+      }
+
       if (event.status !== EventStatus.OPEN) {
         throw new BadRequestException('Evento não está aberto para inscrições');
       }
 
       const existing = await tx.eventRegistration.findUnique({
-        where: { eventId_userId: { eventId, userId } },
+        where: { eventId_userId: { eventId, userId: user.id } },
       });
 
       if (existing && ACTIVE_STATUSES.includes(existing.status)) {
@@ -74,7 +91,7 @@ export class RegistrationsService {
         return tx.eventRegistration.create({
           data: {
             eventId,
-            userId,
+            userId: user.id,
             status: RegistrationStatus.RESERVED,
             confirmationDeadline: deadline,
           },
@@ -94,7 +111,7 @@ export class RegistrationsService {
       return tx.eventRegistration.create({
         data: {
           eventId,
-          userId,
+          userId: user.id,
           status: RegistrationStatus.WAITLIST,
           waitlistPosition: waitlistCount + 1,
         },
@@ -123,7 +140,9 @@ export class RegistrationsService {
     return result;
   }
 
-  async cancel(userId: string, registrationId: string) {
+  async cancel(user: User, registrationId: string) {
+    this.assertParticipant(user);
+
     const outcome = await this.prisma.$transaction(async (tx) => {
       const registration = await tx.eventRegistration.findUnique({
         where: { id: registrationId },
@@ -134,7 +153,7 @@ export class RegistrationsService {
         throw new NotFoundException('Inscrição não encontrada');
       }
 
-      if (registration.userId !== userId) {
+      if (registration.userId !== user.id) {
         throw new ForbiddenException('Acesso negado');
       }
 
@@ -198,7 +217,9 @@ export class RegistrationsService {
     };
   }
 
-  async confirm(userId: string, registrationId: string) {
+  async confirm(user: User, registrationId: string) {
+    this.assertParticipant(user);
+
     const registration = await this.prisma.eventRegistration.findUnique({
       where: { id: registrationId },
       include: { event: { include: { policy: true } } },
@@ -208,7 +229,7 @@ export class RegistrationsService {
       throw new NotFoundException('Inscrição não encontrada');
     }
 
-    if (registration.userId !== userId) {
+    if (registration.userId !== user.id) {
       throw new ForbiddenException('Acesso negado');
     }
 
@@ -319,7 +340,18 @@ export class RegistrationsService {
       ),
     };
 
-    return grouped;
+    return {
+      ...grouped,
+      summary: {
+        confirmed: grouped.confirmed.length,
+        reserved: grouped.reserved.length,
+        waitlist: grouped.waitlist.length,
+        attended: grouped.attended.length,
+        noShow: grouped.noShow.length,
+        cancelled: grouped.cancelled.length,
+        total: registrations.length,
+      },
+    };
   }
 
   async markAttendance(
@@ -338,6 +370,12 @@ export class RegistrationsService {
 
     if (registration.event.organizerId !== organizer.id) {
       throw new ForbiddenException('Acesso negado');
+    }
+
+    if (registration.event.status === EventStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Não é possível marcar presença em aula concluída',
+      );
     }
 
     if (registration.status !== RegistrationStatus.CONFIRMED) {

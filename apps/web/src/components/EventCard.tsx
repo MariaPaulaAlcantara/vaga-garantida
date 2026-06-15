@@ -8,19 +8,21 @@ export function EventCard({ event }: { event: Event }) {
     full: 'Lotado — lista de espera',
     closed: 'Encerrado',
     cancelled: 'Cancelado',
+    completed: 'Concluído',
   }[event.availabilityStatus];
 
   const statusClass = {
-    open: 'text-emerald-700',
+    open: 'text-brand',
     full: 'text-amber-700',
     closed: 'text-slate-500',
     cancelled: 'text-red-600',
+    completed: 'text-slate-500',
   }[event.availabilityStatus];
 
   return (
     <Link
       href={`/eventos/${event.id}`}
-      className="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
+      className="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-border hover:shadow-md"
     >
       <h3 className="text-lg font-semibold text-slate-900">{event.title}</h3>
       <p className="mt-1 text-sm text-slate-500">{formatDate(event.startsAt)}</p>

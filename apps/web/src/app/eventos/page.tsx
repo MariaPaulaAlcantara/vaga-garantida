@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { EventCard } from '@/components/EventCard';
+import { RequireParticipant } from '@/components/RoleGuard';
 import { api, ApiError, Event } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 export default function EventosPage() {
+  return (
+    <RequireParticipant>
+      <EventosContent />
+    </RequireParticipant>
+  );
+}
+
+function EventosContent() {
   const { token } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [error, setError] = useState('');
@@ -33,7 +42,7 @@ export default function EventosPage() {
     <div>
       <h1 className="text-2xl font-bold text-slate-900">Próximos eventos</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Aulas gratuitas de bike com vagas limitadas
+        Aulas e eventos com vagas disponíveis
       </p>
       <div className="mt-6 space-y-4">
         {events.length === 0 ? (

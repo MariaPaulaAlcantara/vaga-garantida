@@ -1,5 +1,7 @@
 'use client';
 
+import { ConfirmationWindowInfo } from '@/components/ConfirmationWindowInfo';
+import { RequireParticipant } from '@/components/RoleGuard';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -7,11 +9,18 @@ import { api, ApiError, Registration } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import {
   canConfirmRegistration,
-  confirmationStatusMessage,
 } from '@/lib/confirmation';
 import { formatDate, formatStatus, statusColor } from '@/lib/format';
 
 export default function MinhasInscricoesPage() {
+  return (
+    <RequireParticipant>
+      <MinhasInscricoesContent />
+    </RequireParticipant>
+  );
+}
+
+function MinhasInscricoesContent() {
   const router = useRouter();
   const { token, isLoading: authLoading } = useAuth();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -78,7 +87,7 @@ export default function MinhasInscricoesPage() {
         {registrations.length === 0 ? (
           <p className="text-slate-500">
             Você ainda não tem inscrições.{' '}
-            <Link href="/eventos" className="text-emerald-700 hover:underline">
+            <Link href="/eventos" className="text-brand hover:underline">
               Ver eventos
             </Link>
           </p>
@@ -92,7 +101,7 @@ export default function MinhasInscricoesPage() {
                 <div>
                   <Link
                     href={`/eventos/${reg.eventId}`}
-                    className="font-semibold text-slate-900 hover:text-emerald-700"
+                    className="font-semibold text-slate-900 hover:text-brand"
                   >
                     {reg.event?.title ?? 'Evento'}
                   </Link>
@@ -106,17 +115,14 @@ export default function MinhasInscricoesPage() {
                       Posição na fila: {reg.waitlistPosition}
                     </p>
                   )}
-                  {confirmationStatusMessage(
-                    reg.status,
-                    reg.confirmationWindow,
-                  ) && (
-                    <p className="mt-1 text-sm text-amber-700">
-                      {confirmationStatusMessage(
-                        reg.status,
-                        reg.confirmationWindow,
-                      )}
-                    </p>
-                  )}
+                  {reg.confirmationWindow &&
+                    ['RESERVED', 'WAITLIST'].includes(reg.status) && (
+                      <div className="mt-3">
+                        <ConfirmationWindowInfo
+                          window={reg.confirmationWindow}
+                        />
+                      </div>
+                    )}
                 </div>
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColor(reg.status)}`}
@@ -130,7 +136,7 @@ export default function MinhasInscricoesPage() {
                   <button
                     onClick={() => handleConfirm(reg.id)}
                     disabled={actionId === reg.id}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
+                    className="rounded-lg bg-brand px-3 py-1.5 text-sm text-white hover:bg-brand-dark disabled:opacity-50"
                   >
                     Confirmar presença
                   </button>

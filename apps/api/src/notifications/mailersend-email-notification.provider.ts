@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { htmlToPlainText } from './email-format.util';
 import { EmailNotificationProvider } from './email-notification.interface';
 import { parseEmailFrom } from './parse-email-from.util';
 
@@ -27,6 +28,7 @@ export class MailerSendEmailNotificationProvider implements EmailNotificationPro
         to: [{ email: to }],
         subject,
         html,
+        text: htmlToPlainText(html),
       }),
     });
 

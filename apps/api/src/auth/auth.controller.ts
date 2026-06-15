@@ -1,5 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@vaga-garantida/database';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -18,9 +19,15 @@ export class AuthController {
   }
 
   @Post('login')
-  @ApiOperation({ summary: 'Login com email e senha' })
+  @ApiOperation({ summary: 'Login de participante (aluno)' })
   login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+    return this.authService.login(dto, UserRole.PARTICIPANT);
+  }
+
+  @Post('login/organizer')
+  @ApiOperation({ summary: 'Login de organizador (professor)' })
+  loginOrganizer(@Body() dto: LoginDto) {
+    return this.authService.login(dto, UserRole.ORGANIZER);
   }
 
   @Post('otp/request')

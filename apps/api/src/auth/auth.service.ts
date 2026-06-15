@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -70,7 +71,7 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, expectedRole?: UserRole) {
     const email = this.usersService.normalizeEmail(dto.email);
     const user = await this.usersService.findByEmail(email);
 
@@ -81,6 +82,14 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
       throw new UnauthorizedException('Email ou senha inválidos');
+    }
+
+    if (expectedRole && user.role !== expectedRole) {
+      throw new ForbiddenException(
+        expectedRole === UserRole.ORGANIZER
+          ? 'Esta conta não é de organizador. Use o login de aluno.'
+          : 'Esta conta é de organizador. Use o login de professor.',
+      );
     }
 
     return this.buildAuthResponse(user);
