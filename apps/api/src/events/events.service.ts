@@ -181,7 +181,10 @@ export class EventsService {
   ) {
     try {
       const participants =
-        await this.notifications.findParticipantsForNewEvent(organizer.id);
+        await this.notifications.findParticipantsForNewEvent(
+          organizer.id,
+          event.id,
+        );
 
       if (participants.length === 0) {
         return;
