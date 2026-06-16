@@ -313,11 +313,29 @@ export class NotificationDispatchService {
     }
   }
 
-  async findParticipantsForNewEvent(organizerId: string) {
+  async findParticipantsForNewEvent(organizerId: string, excludeEventId: string) {
+    const now = new Date();
+
     return this.prisma.user.findMany({
       where: {
         role: UserRole.PARTICIPANT,
         NOT: { id: organizerId },
+        registrations: {
+          some: {
+            status: {
+              in: [
+                RegistrationStatus.ATTENDED,
+                RegistrationStatus.NO_SHOW,
+                RegistrationStatus.CONFIRMED,
+              ],
+            },
+            event: {
+              organizerId,
+              id: { not: excludeEventId },
+              startsAt: { lt: now },
+            },
+          },
+        },
       },
       select: { id: true, email: true, name: true },
     });
