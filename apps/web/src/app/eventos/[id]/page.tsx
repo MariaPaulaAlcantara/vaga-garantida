@@ -103,6 +103,8 @@ function EventoDetailContent() {
     myRegistration?.status ?? '',
     confirmationWindow,
   );
+  const canDirectEnroll =
+    event.availableSpots > 0 && Boolean(event.confirmationWindow?.isOpen);
 
   return (
     <div className="space-y-6">
@@ -145,15 +147,18 @@ function EventoDetailContent() {
         <div className="mt-6 flex flex-wrap gap-3">
           {!myRegistration && event.availabilityStatus !== 'cancelled' && (
             <button
+              type="button"
               onClick={handleRegister}
               disabled={actionLoading}
-              className="rounded-lg bg-brand px-4 py-2 text-white hover:bg-brand-dark disabled:opacity-50"
+              className="cursor-pointer rounded-lg bg-brand px-4 py-2 text-white hover:bg-brand-dark disabled:opacity-50"
             >
               {actionLoading
                 ? 'Processando...'
                 : event.availabilityStatus === 'full'
                   ? 'Entrar na lista de espera'
-                  : 'Reservar vaga'}
+                  : canDirectEnroll
+                    ? 'Inscrever-se'
+                    : 'Reservar vaga'}
             </button>
           )}
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/lib/auth';
 
@@ -60,11 +60,6 @@ export function Header() {
           <Logo href={isOrganizer ? '/professor' : '/eventos'} />
 
           <div className="flex items-center gap-2">
-            {user && (
-              <div className="md:hidden">
-                <ProfileMenu userName={user.name} onLogout={logout} />
-              </div>
-            )}
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
@@ -77,7 +72,16 @@ export function Header() {
             <nav className="hidden items-center gap-4 text-sm md:flex">
               {navLinks}
               {user ? (
-                <ProfileMenu userName={user.name} onLogout={logout} />
+                <>
+                  <UserAvatar name={user.name} />
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="cursor-pointer text-slate-600 hover:text-brand"
+                  >
+                    Sair
+                  </button>
+                </>
               ) : (
                 <Link
                   href="/login"
@@ -93,6 +97,21 @@ export function Header() {
         {menuOpen && (
           <nav className="mt-3 flex flex-col gap-3 border-t border-edge pt-3 text-sm md:hidden">
             {navLinks}
+            {user && (
+              <>
+                <UserAvatar name={user.name} />
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMenu();
+                    logout();
+                  }}
+                  className="cursor-pointer text-left text-slate-600 hover:text-brand"
+                >
+                  Sair
+                </button>
+              </>
+            )}
             {!user && (
               <Link
                 href="/login"
@@ -109,78 +128,24 @@ export function Header() {
   );
 }
 
-function ProfileMenu({
-  userName,
-  onLogout,
-}: {
-  userName: string;
-  onLogout: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-edge bg-brand-light text-brand hover:bg-brand-border"
-        aria-expanded={open}
-        aria-label="Menu do perfil"
-      >
-        <ProfileIcon />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-edge bg-white py-2 shadow-lg">
-          <p className="border-b border-edge px-4 py-2 text-sm font-medium text-slate-900">
-            {userName}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onLogout();
-            }}
-            className="w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-brand-light"
-          >
-            Sair
-          </button>
-        </div>
-      )}
-    </div>
-  );
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function ProfileIcon() {
+function UserAvatar({ name }: { name: string }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-edge bg-brand-light text-xs font-semibold uppercase text-brand"
+      aria-label={name}
+      title={name}
     >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" />
-    </svg>
+      {getInitials(name)}
+    </span>
   );
 }
 

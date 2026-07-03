@@ -15,6 +15,7 @@ import { NotificationDispatchService } from '../notifications/notification-dispa
 import { PrismaService } from '../prisma/prisma.service';
 import {
   getConfirmationWindow,
+  isConfirmationWindowOpen,
   toConfirmationWindowDto,
 } from './confirmation-window.util';
 import { RegistrationPromotionService } from './registration-promotion.service';
@@ -84,16 +85,23 @@ export class RegistrationsService {
       const occupied = await this.promotion.countOccupiedSpots(tx, eventId);
 
       if (occupied < event.capacity) {
+        const now = new Date();
         const deadline = event.policy
           ? this.promotion.computeConfirmationDeadline(event, event.policy)
           : null;
+        const directConfirm =
+          event.policy !== null &&
+          isConfirmationWindowOpen(event.startsAt, event.policy, now);
 
         return tx.eventRegistration.create({
           data: {
             eventId,
             userId: user.id,
-            status: RegistrationStatus.RESERVED,
-            confirmationDeadline: deadline,
+            status: directConfirm
+              ? RegistrationStatus.CONFIRMED
+              : RegistrationStatus.RESERVED,
+            confirmationDeadline: directConfirm ? null : deadline,
+            ...(directConfirm ? { confirmedAt: now } : {}),
           },
           include: {
             event: {
@@ -174,15 +182,8 @@ export class RegistrationsService {
         },
       });
 
-      let waitlistChanges: Awaited<
-        ReturnType<RegistrationPromotionService['reindexWaitlist']>
-      > = [];
-
       if (registration.status === RegistrationStatus.WAITLIST) {
-        waitlistChanges = await this.promotion.reindexWaitlist(
-          tx,
-          registration.eventId,
-        );
+        await this.promotion.reindexWaitlist(tx, registration.eventId);
       }
 
       let promotionResult = null;
@@ -192,18 +193,10 @@ export class RegistrationsService {
           registration.eventId,
           true,
         );
-        if (promotionResult) {
-          waitlistChanges = [
-            ...waitlistChanges,
-            ...promotionResult.waitlistChanges,
-          ];
-        }
       }
 
       return {
-        eventId: registration.eventId,
         promoted: promotionResult?.promoted ?? null,
-        waitlistChanges,
       };
     });
 
@@ -423,9 +416,7 @@ export class RegistrationsService {
 
         return {
           expiredId: registration.id,
-          eventId: registration.eventId,
           promoted: promotionResult?.promoted ?? null,
-          waitlistChanges: promotionResult?.waitlistChanges ?? [],
         };
       });
 
@@ -443,8 +434,7 @@ export class RegistrationsService {
     return this.notifications.processConfirmationReminders();
   }
 
-  private dispatchPromotionNotifications(outcome: {
-    eventId: string;
+  private async dispatchPromotionNotifications(outcome: {
     promoted: {
       user: { email: string; name: string };
       event: {
@@ -454,32 +444,23 @@ export class RegistrationsService {
         location: string;
       };
       confirmationDeadline: Date | null;
+      status: RegistrationStatus;
     } | null;
-    waitlistChanges: Array<{
-      registrationId: string;
-      userId: string;
-      newPosition: number;
-      previousPosition: number;
-    }>;
   }) {
-    if (outcome.promoted) {
-      this.notifications
-        .notifyPromoted({
-          user: outcome.promoted.user,
-          event: outcome.promoted.event,
-          confirmationDeadline: outcome.promoted.confirmationDeadline,
-        })
-        .catch((err) =>
-          this.logger.error('Falha ao avisar promoção da lista de espera', err),
-        );
+    if (!outcome.promoted) {
+      return;
     }
 
-    if (outcome.waitlistChanges.length > 0) {
-      this.notifications
-        .handleWaitlistPositionChanges(outcome.eventId, outcome.waitlistChanges)
-        .catch((err) =>
-          this.logger.error('Falha ao avisar mudança na lista de espera', err),
-        );
+    try {
+      await this.notifications.notifyPromoted({
+        user: outcome.promoted.user,
+        event: outcome.promoted.event,
+        confirmationDeadline: outcome.promoted.confirmationDeadline,
+        alreadyConfirmed:
+          outcome.promoted.status === RegistrationStatus.CONFIRMED,
+      });
+    } catch (err) {
+      this.logger.error('Falha ao avisar promoção da lista de espera', err);
     }
   }
 }

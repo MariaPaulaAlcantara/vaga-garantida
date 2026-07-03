@@ -16,16 +16,10 @@ const ACTIVE_SPOT_STATUSES: RegistrationStatus[] = [
   RegistrationStatus.CONFIRMED,
 ];
 
-export type WaitlistPositionChange = {
-  registrationId: string;
-  userId: string;
-  newPosition: number;
-  previousPosition: number;
-};
-
 export type PromotedRegistration = {
   id: string;
   userId: string;
+  status: RegistrationStatus;
   confirmationDeadline: Date | null;
   user: { email: string; name: string };
   event: {
@@ -38,7 +32,6 @@ export type PromotedRegistration = {
 
 export type PromotionResult = {
   promoted: PromotedRegistration;
-  waitlistChanges: WaitlistPositionChange[];
 };
 
 @Injectable()
@@ -106,13 +99,21 @@ export class RegistrationPromotionService {
       promoted,
     );
 
+    const confirmationOpen = isConfirmationWindowOpen(
+      event.startsAt,
+      event.policy,
+    );
+
     const promotedRegistration = await tx.eventRegistration.update({
       where: { id: next.id },
       data: {
-        status: RegistrationStatus.RESERVED,
+        status: confirmationOpen
+          ? RegistrationStatus.CONFIRMED
+          : RegistrationStatus.RESERVED,
         waitlistPosition: null,
-        confirmationDeadline: deadline,
+        confirmationDeadline: confirmationOpen ? null : deadline,
         lastNotifiedWaitlistPosition: null,
+        ...(confirmationOpen ? { confirmedAt: new Date() } : {}),
       },
       include: {
         user: { select: { email: true, name: true } },
@@ -122,45 +123,26 @@ export class RegistrationPromotionService {
       },
     });
 
-    const waitlistChanges = await this.reindexWaitlist(tx, eventId);
+    await this.reindexWaitlist(tx, eventId);
 
-    return { promoted: promotedRegistration, waitlistChanges };
+    return { promoted: promotedRegistration };
   }
 
   async reindexWaitlist(
     tx: Prisma.TransactionClient,
     eventId: string,
-  ): Promise<WaitlistPositionChange[]> {
+  ): Promise<void> {
     const waitlist = await tx.eventRegistration.findMany({
       where: { eventId, status: RegistrationStatus.WAITLIST },
       orderBy: [{ waitlistPosition: 'asc' }, { joinedAt: 'asc' }],
     });
 
-    const changes: WaitlistPositionChange[] = [];
-
     for (let i = 0; i < waitlist.length; i++) {
-      const newPosition = i + 1;
-      const previousPosition = waitlist[i].waitlistPosition;
-
-      if (
-        previousPosition !== null &&
-        newPosition < previousPosition
-      ) {
-        changes.push({
-          registrationId: waitlist[i].id,
-          userId: waitlist[i].userId,
-          newPosition,
-          previousPosition,
-        });
-      }
-
       await tx.eventRegistration.update({
         where: { id: waitlist[i].id },
-        data: { waitlistPosition: newPosition },
+        data: { waitlistPosition: i + 1 },
       });
     }
-
-    return changes;
   }
 
   async releaseSpotAndPromote(
