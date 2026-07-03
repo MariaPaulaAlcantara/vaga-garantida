@@ -52,8 +52,8 @@ Criar uma solução que permita:
 
 A API envia emails automaticamente nos seguintes casos:
 
-* **Lista de espera** — ao entrar na fila ou avançar de posição.
-* **Vaga liberada** — ao sair da fila e precisar confirmar presença.
+* **Lista de espera** — ao entrar na fila (confirmação da posição).
+* **Vaga liberada** — apenas para o 1º da fila quando uma vaga abre (promoção automática).
 * **Lembrete de confirmação** — quando abre a janela para confirmar presença.
 * **Nova aula** — quando a organizadora publica um evento (`publish: true`).
 

@@ -18,6 +18,18 @@ async function main() {
     },
   });
 
+  await prisma.user.upsert({
+    where: { email: 'prof@example.com' },
+    update: {},
+    create: {
+      name: 'prof prof',
+      email: 'prof@example.com',
+      passwordHash,
+      phone: '11977770000',
+      role: UserRole.ORGANIZER,
+    },
+  });
+
   const participant = await prisma.user.upsert({
     where: { email: 'joao@example.com' },
     update: {},
@@ -67,6 +79,7 @@ async function main() {
 
   console.log('Seed concluído:', {
     organizer: organizer.email,
+    testOrganizer: 'prof@example.com',
     participant: participant.email,
     event: event.title,
     defaultPassword: 'senha1234',

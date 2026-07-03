@@ -39,11 +39,16 @@ export class NotificationDispatchService {
     user: Pick<User, 'email' | 'name'>;
     event: Pick<Event, 'id' | 'title' | 'startsAt' | 'location'>;
     confirmationDeadline: Date | null;
+    alreadyConfirmed?: boolean;
   }) {
     const eventLink = buildEventUrl(this.appUrl, params.event.id);
     const deadlineText = params.confirmationDeadline
       ? formatEventDate(params.confirmationDeadline)
       : 'o prazo indicado no app';
+
+    const actionText = params.alreadyConfirmed
+      ? 'Sua presença já está confirmada. Acesse o app para ver os detalhes da aula.'
+      : `Confirme sua presença até <strong>${deadlineText}</strong> para garantir a vaga.`;
 
     const body = `
       <p style="margin: 0 0 16px;">Olá, <strong>${escapeHtml(params.user.name)}</strong>!</p>
@@ -56,16 +61,23 @@ export class NotificationDispatchService {
           </td>
         </tr>
       </table>
-      <p style="margin: 0;">Confirme sua presença até <strong>${deadlineText}</strong> para garantir a vaga.</p>
+      <p style="margin: 0;">${actionText}</p>
     `;
 
     await this.sendSafe(
       params.user.email,
       `Vaga liberada: ${params.event.title}`,
-      emailLayout('Sua vaga foi liberada!', body, this.appUrl, {
-        href: eventLink,
-        label: 'Confirmar presença',
-      }),
+      emailLayout(
+        params.alreadyConfirmed
+          ? 'Sua vaga está garantida!'
+          : 'Sua vaga foi liberada!',
+        body,
+        this.appUrl,
+        {
+          href: eventLink,
+          label: params.alreadyConfirmed ? 'Ver aula' : 'Confirmar presença',
+        },
+      ),
     );
   }
 
@@ -74,24 +86,12 @@ export class NotificationDispatchService {
     user: Pick<User, 'email' | 'name'>;
     event: Pick<Event, 'id' | 'title' | 'startsAt'>;
     position: number;
-    previousPosition?: number;
   }) {
     const eventLink = buildEventUrl(this.appUrl, params.event.id);
-    const advanced =
-      params.previousPosition !== undefined &&
-      params.position < params.previousPosition;
-
-    const subject = advanced
-      ? `Lista de espera: você avançou para a posição ${params.position}`
-      : `Lista de espera: posição ${params.position}`;
-
-    const intro = advanced
-      ? `Você avançou na lista de espera e agora está na <strong>posição ${params.position}</strong>.`
-      : `Você entrou na lista de espera na <strong>posição ${params.position}</strong>.`;
 
     const body = `
       <p style="margin: 0 0 16px;">Olá, <strong>${escapeHtml(params.user.name)}</strong>!</p>
-      <p style="margin: 0 0 16px;">${intro}</p>
+      <p style="margin: 0 0 16px;">Você entrou na lista de espera na <strong>posição ${params.position}</strong>.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin: 0 0 16px; background-color: #F3EEFF; border: 1px solid #D4B8FF; border-radius: 12px;">
         <tr>
           <td style="padding: 16px;">
@@ -105,7 +105,7 @@ export class NotificationDispatchService {
 
     const sent = await this.sendSafe(
       params.user.email,
-      subject,
+      `Lista de espera: posição ${params.position}`,
       emailLayout('Atualização na lista de espera', body, this.appUrl, {
         href: eventLink,
         label: 'Ver aula',
@@ -262,55 +262,6 @@ export class NotificationDispatchService {
     }
 
     return { sent };
-  }
-
-  async handleWaitlistPositionChanges(
-    eventId: string,
-    changes: Array<{
-      registrationId: string;
-      userId: string;
-      newPosition: number;
-      previousPosition: number;
-    }>,
-  ) {
-    if (changes.length === 0) {
-      return;
-    }
-
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-      select: { id: true, title: true, startsAt: true },
-    });
-
-    if (!event) {
-      return;
-    }
-
-    for (const change of changes) {
-      const user = await this.prisma.user.findUnique({
-        where: { id: change.userId },
-        select: { email: true, name: true },
-      });
-
-      if (!user) {
-        continue;
-      }
-
-      try {
-        await this.notifyWaitlistPosition({
-          registrationId: change.registrationId,
-          user,
-          event,
-          position: change.newPosition,
-          previousPosition: change.previousPosition,
-        });
-      } catch (err) {
-        this.logger.error(
-          `Falha ao avisar posição na fila (${change.registrationId})`,
-          err,
-        );
-      }
-    }
   }
 
   async findParticipantsForNewEvent(organizerId: string, excludeEventId: string) {

@@ -230,16 +230,18 @@ function RegistrationSection({
                 {showAttendance && onAttendance && (
                   <>
                     <button
+                      type="button"
                       onClick={() => onAttendance(reg.id, true)}
                       disabled={actionId === reg.id}
-                      className="rounded-lg bg-brand px-2.5 py-1 text-xs text-white hover:bg-brand-dark disabled:opacity-50"
+                      className="cursor-pointer rounded-lg bg-brand px-2.5 py-1 text-xs text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Presente
                     </button>
                     <button
+                      type="button"
                       onClick={() => onAttendance(reg.id, false)}
                       disabled={actionId === reg.id}
-                      className="rounded-lg border border-red-200 px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      className="cursor-pointer rounded-lg border border-red-200 px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Ausente
                     </button>
