@@ -60,6 +60,11 @@ export function Header() {
           <Logo href={isOrganizer ? '/professor' : '/eventos'} />
 
           <div className="flex items-center gap-2">
+            {user && (
+              <div className="md:hidden">
+                <UserAvatar name={user.name} />
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
@@ -98,19 +103,16 @@ export function Header() {
           <nav className="mt-3 flex flex-col gap-3 border-t border-edge pt-3 text-sm md:hidden">
             {navLinks}
             {user && (
-              <>
-                <UserAvatar name={user.name} />
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeMenu();
-                    logout();
-                  }}
-                  className="cursor-pointer text-left text-slate-600 hover:text-brand"
-                >
-                  Sair
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  logout();
+                }}
+                className="cursor-pointer text-left text-slate-600 hover:text-brand"
+              >
+                Sair
+              </button>
             )}
             {!user && (
               <Link

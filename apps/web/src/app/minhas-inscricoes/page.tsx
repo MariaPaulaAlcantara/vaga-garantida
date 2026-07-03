@@ -9,6 +9,7 @@ import { api, ApiError, Registration } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import {
   canConfirmRegistration,
+  confirmCancelRegistration,
 } from '@/lib/confirmation';
 import { formatDate, formatStatus, statusColor } from '@/lib/format';
 
@@ -63,6 +64,7 @@ function MinhasInscricoesContent() {
 
   async function handleCancel(id: string) {
     if (!token) return;
+    if (!confirmCancelRegistration()) return;
     setActionId(id);
     try {
       await api.cancelRegistration(id, token);

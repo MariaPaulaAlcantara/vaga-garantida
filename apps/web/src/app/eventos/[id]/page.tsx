@@ -9,6 +9,7 @@ import { api, ApiError, Event, Registration } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import {
   canConfirmRegistration,
+  confirmCancelRegistration,
 } from '@/lib/confirmation';
 import { formatDate } from '@/lib/format';
 
@@ -67,6 +68,7 @@ function EventoDetailContent() {
 
   async function handleCancel() {
     if (!token || !myRegistration) return;
+    if (!confirmCancelRegistration()) return;
     setActionLoading(true);
     setError('');
     try {
