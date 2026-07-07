@@ -22,6 +22,12 @@ export function formatConfirmationDate(iso: string): string {
   });
 }
 
+export function confirmCancelRegistration(): boolean {
+  return window.confirm(
+    'Tem certeza que deseja cancelar sua inscrição? Se você cancelar, perderá sua vaga nesta aula.',
+  );
+}
+
 export function confirmationStatusMessage(
   status: string,
   window?: ConfirmationWindow | null,
