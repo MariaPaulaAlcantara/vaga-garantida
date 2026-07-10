@@ -118,10 +118,13 @@ function MinhasInscricoesContent() {
                     </p>
                   )}
                   {reg.confirmationWindow &&
-                    ['RESERVED', 'WAITLIST'].includes(reg.status) && (
+                    ['RESERVED', 'WAITLIST', 'CONFIRMED'].includes(
+                      reg.status,
+                    ) && (
                       <div className="mt-3">
                         <ConfirmationWindowInfo
                           window={reg.confirmationWindow}
+                          registrationStatus={reg.status}
                         />
                       </div>
                     )}

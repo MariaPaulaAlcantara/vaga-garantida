@@ -138,9 +138,14 @@ function EventoDetailContent() {
         {event.confirmationWindow && (
           <div className="mt-4">
             <h2 className="text-sm font-semibold text-slate-900">
-              Período para confirmar presença
+              {myRegistration?.status === 'CONFIRMED'
+                ? 'Sua inscrição'
+                : 'Período para confirmar presença'}
             </h2>
-            <ConfirmationWindowInfo window={event.confirmationWindow} />
+            <ConfirmationWindowInfo
+              window={event.confirmationWindow}
+              registrationStatus={myRegistration?.status}
+            />
           </div>
         )}
 
@@ -166,9 +171,11 @@ function EventoDetailContent() {
 
           {myRegistration && (
             <div className="w-full space-y-3">
-              <p className="text-sm text-slate-600">
-                Status: <strong>{statusLabel(myRegistration)}</strong>
-              </p>
+              {myRegistration.status !== 'CONFIRMED' && (
+                <p className="text-sm text-slate-600">
+                  Status: <strong>{statusLabel(myRegistration)}</strong>
+                </p>
+              )}
 
               {canConfirm && (
                 <button

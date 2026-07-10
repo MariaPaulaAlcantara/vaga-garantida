@@ -120,6 +120,36 @@ export class NotificationDispatchService {
     }
   }
 
+  async notifyPresenceConfirmed(params: {
+    user: Pick<User, 'email' | 'name'>;
+    event: Pick<Event, 'id' | 'title' | 'startsAt' | 'location'>;
+  }) {
+    const eventLink = buildEventUrl(this.appUrl, params.event.id);
+
+    const body = `
+      <p style="margin: 0 0 16px;">Olá, <strong>${escapeHtml(params.user.name)}</strong>!</p>
+      <p style="margin: 0 0 16px;">Sua presença foi confirmada com sucesso.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin: 0 0 16px; background-color: #ECFDF5; border: 1px solid #6EE7B7; border-radius: 12px;">
+        <tr>
+          <td style="padding: 16px;">
+            <p style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #111827;">${escapeHtml(params.event.title)}</p>
+            <p style="margin: 0; font-size: 14px; color: #6B7280;">${formatEventDate(params.event.startsAt)} — ${escapeHtml(params.event.location)}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0;">Sua vaga está garantida. Nos vemos na aula!</p>
+    `;
+
+    await this.sendSafe(
+      params.user.email,
+      `Presença confirmada: ${params.event.title}`,
+      emailLayout('Presença confirmada!', body, this.appUrl, {
+        href: eventLink,
+        label: 'Ver aula',
+      }),
+    );
+  }
+
   async notifyConfirmationReminder(params: {
     registrationId: string;
     user: Pick<User, 'email' | 'name'>;

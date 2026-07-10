@@ -28,7 +28,7 @@ export function formatPhone(phone: string): string {
 export function formatStatus(status: string) {
   const labels: Record<string, string> = {
     RESERVED: 'Aguardando confirmação',
-    CONFIRMED: 'Confirmado',
+    CONFIRMED: 'Presença confirmada',
     WAITLIST: 'Lista de espera',
     CANCELLED: 'Cancelado',
     EXPIRED: 'Expirado',
@@ -41,7 +41,7 @@ export function formatStatus(status: string) {
 export function statusColor(status: string) {
   const colors: Record<string, string> = {
     RESERVED: 'bg-amber-100 text-amber-800',
-    CONFIRMED: 'bg-brand-light text-brand-dark',
+    CONFIRMED: 'bg-emerald-100 text-emerald-800',
     WAITLIST: 'bg-blue-100 text-blue-800',
     CANCELLED: 'bg-slate-100 text-slate-600',
     EXPIRED: 'bg-red-100 text-red-800',
