@@ -125,7 +125,7 @@ export class RegistrationsService {
         },
         include: {
           event: {
-            select: { id: true, title: true, startsAt: true },
+            select: { id: true, title: true, startsAt: true, location: true },
           },
           user: { select: { email: true, name: true } },
         },
