@@ -252,13 +252,30 @@ export class RegistrationsService {
       throw new BadRequestException('Prazo de confirmação expirado');
     }
 
-    return this.prisma.eventRegistration.update({
+    const updated = await this.prisma.eventRegistration.update({
       where: { id: registrationId },
       data: {
         status: RegistrationStatus.CONFIRMED,
         confirmedAt: now,
       },
+      include: {
+        user: { select: { email: true, name: true } },
+        event: {
+          select: { id: true, title: true, startsAt: true, location: true },
+        },
+      },
     });
+
+    void this.notifications
+      .notifyPresenceConfirmed({
+        user: updated.user,
+        event: updated.event,
+      })
+      .catch((err) =>
+        this.logger.error('Falha ao enviar email de presença confirmada', err),
+      );
+
+    return updated;
   }
 
   async findMine(userId: string) {
