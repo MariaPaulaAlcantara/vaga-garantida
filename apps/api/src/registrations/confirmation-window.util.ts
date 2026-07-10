@@ -178,6 +178,19 @@ export function isConfirmationWindowOpen(
   return getConfirmationWindow(startsAt, policy, now).isOpen;
 }
 
+/** Inscrições após o início do período (janela aberta ou já encerrada) vão direto para confirmado. */
+export function shouldAutoConfirmRegistration(
+  startsAt: Date,
+  policy: Pick<
+    ConfirmationPolicy,
+    'opensDaysBefore' | 'closesAtTime'
+  >,
+  now = new Date(),
+): boolean {
+  const { opensAt } = getConfirmationWindow(startsAt, policy, now);
+  return now >= opensAt;
+}
+
 export function computeConfirmationDeadline(
   startsAt: Date,
   policy: Pick<

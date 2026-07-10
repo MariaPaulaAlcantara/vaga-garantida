@@ -15,7 +15,7 @@ import { NotificationDispatchService } from '../notifications/notification-dispa
 import { PrismaService } from '../prisma/prisma.service';
 import {
   getConfirmationWindow,
-  isConfirmationWindowOpen,
+  shouldAutoConfirmRegistration,
   toConfirmationWindowDto,
 } from './confirmation-window.util';
 import { RegistrationPromotionService } from './registration-promotion.service';
@@ -89,23 +89,23 @@ export class RegistrationsService {
         const deadline = event.policy
           ? this.promotion.computeConfirmationDeadline(event, event.policy)
           : null;
-        const directConfirm =
+        const autoConfirm =
           event.policy !== null &&
-          isConfirmationWindowOpen(event.startsAt, event.policy, now);
+          shouldAutoConfirmRegistration(event.startsAt, event.policy, now);
 
         return tx.eventRegistration.create({
           data: {
             eventId,
             userId: user.id,
-            status: directConfirm
+            status: autoConfirm
               ? RegistrationStatus.CONFIRMED
               : RegistrationStatus.RESERVED,
-            confirmationDeadline: directConfirm ? null : deadline,
-            ...(directConfirm ? { confirmedAt: now } : {}),
+            confirmationDeadline: autoConfirm ? null : deadline,
+            ...(autoConfirm ? { confirmedAt: now } : {}),
           },
           include: {
             event: {
-              select: { id: true, title: true, startsAt: true },
+              select: { id: true, title: true, startsAt: true, location: true },
             },
             user: { select: { email: true, name: true } },
           },
@@ -142,6 +142,17 @@ export class RegistrationsService {
         })
         .catch((err) =>
           this.logger.error('Falha ao avisar entrada na lista de espera', err),
+        );
+    }
+
+    if (result.status === RegistrationStatus.CONFIRMED) {
+      void this.notifications
+        .notifyPresenceConfirmed({
+          user: result.user,
+          event: result.event,
+        })
+        .catch((err) =>
+          this.logger.error('Falha ao enviar email de presença confirmada', err),
         );
     }
 
