@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   computeConfirmationDeadline,
   isConfirmationWindowOpen,
+  shouldAutoConfirmRegistration,
 } from './confirmation-window.util';
 
 const ACTIVE_SPOT_STATUSES: RegistrationStatus[] = [
@@ -99,7 +100,7 @@ export class RegistrationPromotionService {
       promoted,
     );
 
-    const confirmationOpen = isConfirmationWindowOpen(
+    const autoConfirm = shouldAutoConfirmRegistration(
       event.startsAt,
       event.policy,
     );
@@ -107,13 +108,13 @@ export class RegistrationPromotionService {
     const promotedRegistration = await tx.eventRegistration.update({
       where: { id: next.id },
       data: {
-        status: confirmationOpen
+        status: autoConfirm
           ? RegistrationStatus.CONFIRMED
           : RegistrationStatus.RESERVED,
         waitlistPosition: null,
-        confirmationDeadline: confirmationOpen ? null : deadline,
+        confirmationDeadline: autoConfirm ? null : deadline,
         lastNotifiedWaitlistPosition: null,
-        ...(confirmationOpen ? { confirmedAt: new Date() } : {}),
+        ...(autoConfirm ? { confirmedAt: new Date() } : {}),
       },
       include: {
         user: { select: { email: true, name: true } },

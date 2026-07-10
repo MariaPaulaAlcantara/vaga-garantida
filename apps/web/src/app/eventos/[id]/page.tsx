@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/auth';
 import {
   canConfirmRegistration,
   confirmCancelRegistration,
+  shouldAutoConfirmOnEnrollment,
 } from '@/lib/confirmation';
 import { formatDate } from '@/lib/format';
 
@@ -106,7 +107,8 @@ function EventoDetailContent() {
     confirmationWindow,
   );
   const canDirectEnroll =
-    event.availableSpots > 0 && Boolean(event.confirmationWindow?.isOpen);
+    event.availableSpots > 0 &&
+    shouldAutoConfirmOnEnrollment(confirmationWindow);
 
   return (
     <div className="space-y-6">

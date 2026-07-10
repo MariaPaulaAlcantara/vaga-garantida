@@ -11,6 +11,16 @@ export function canConfirmRegistration(
   return status === 'RESERVED' && Boolean(window?.isOpen);
 }
 
+export function shouldAutoConfirmOnEnrollment(
+  window?: ConfirmationWindow | null,
+): boolean {
+  if (!window) {
+    return false;
+  }
+
+  return Date.now() >= new Date(window.opensAt).getTime();
+}
+
 export function formatConfirmationDate(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', {
     day: '2-digit',
