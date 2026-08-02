@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "concurrently": "^10.0.3",
-    "postcss": "8.5.15"
+    "postcss": "8.5.18"
   },
   "overrides": {
     "esbuild": "0.28.1",
