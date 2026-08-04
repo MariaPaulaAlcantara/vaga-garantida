@@ -113,11 +113,60 @@ export class NotificationDispatchService {
     );
 
     if (sent) {
-      await this.prisma.eventRegistration.update({
-        where: { id: params.registrationId },
-        data: { lastNotifiedWaitlistPosition: params.position },
-      });
+      await this.markWaitlistPositionNotified(
+        params.registrationId,
+        params.position,
+      );
     }
+  }
+
+  async notifyWaitlistPositionUpdate(params: {
+    registrationId: string;
+    user: Pick<User, 'email' | 'name'>;
+    event: Pick<Event, 'id' | 'title' | 'startsAt'>;
+    position: number;
+  }) {
+    const eventLink = buildEventUrl(this.appUrl, params.event.id);
+
+    const body = `
+      <p style="margin: 0 0 16px;">Olá, <strong>${escapeHtml(params.user.name)}</strong>!</p>
+      <p style="margin: 0 0 16px;">Você avançou na lista de espera e agora está na <strong>posição ${params.position}</strong>.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin: 0 0 16px; background-color: #F3EEFF; border: 1px solid #D4B8FF; border-radius: 12px;">
+        <tr>
+          <td style="padding: 16px;">
+            <p style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #111827;">${escapeHtml(params.event.title)}</p>
+            <p style="margin: 0; font-size: 14px; color: #6B7280;">${formatEventDate(params.event.startsAt)}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0;">Se uma vaga for liberada, você será avisado por e-mail.</p>
+    `;
+
+    const sent = await this.sendSafe(
+      params.user.email,
+      `Lista de espera: você avançou para a posição ${params.position}`,
+      emailLayout('Você avançou na lista de espera', body, this.appUrl, {
+        href: eventLink,
+        label: 'Ver aula',
+      }),
+    );
+
+    if (sent) {
+      await this.markWaitlistPositionNotified(
+        params.registrationId,
+        params.position,
+      );
+    }
+  }
+
+  private async markWaitlistPositionNotified(
+    registrationId: string,
+    position: number,
+  ) {
+    await this.prisma.eventRegistration.update({
+      where: { id: registrationId },
+      data: { lastNotifiedWaitlistPosition: position },
+    });
   }
 
   async notifyPresenceConfirmed(params: {
