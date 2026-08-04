@@ -12,17 +12,31 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  EMAIL_NOTIFICATION_PROVIDER,
+  EmailNotificationProvider,
+} from '../notifications/email-notification.interface';
+import {
+  buildAppPath,
+  emailLayout,
+  escapeHtml,
+  resolveWebAppUrl,
+} from '../notifications/email-format.util';
+import {
   NOTIFICATION_PROVIDER,
   NotificationProvider,
 } from '../notifications/notification.interface';
 import { UsersService } from '../users/users.service';
+import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 const OTP_EXPIRY_MINUTES = 5;
 const MAX_OTP_ATTEMPTS = 5;
+const PASSWORD_RESET_SUCCESS_MESSAGE =
+  'Se o email estiver cadastrado, enviaremos um código';
 
 @Injectable()
 export class AuthService {
@@ -33,6 +47,8 @@ export class AuthService {
     private readonly config: ConfigService,
     @Inject(NOTIFICATION_PROVIDER)
     private readonly notifications: NotificationProvider,
+    @Inject(EMAIL_NOTIFICATION_PROVIDER)
+    private readonly email: EmailNotificationProvider,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -93,6 +109,106 @@ export class AuthService {
     }
 
     return this.buildAuthResponse(user);
+  }
+
+  async requestPasswordReset(dto: RequestPasswordResetDto) {
+    const email = this.usersService.normalizeEmail(dto.email);
+    const user = await this.usersService.findByEmail(email);
+
+    if (user?.role === UserRole.PARTICIPANT) {
+      const mailerConfigured = Boolean(
+        this.config.get<string>('MAILERSEND_API_TOKEN') &&
+          this.config.get<string>('EMAIL_FROM'),
+      );
+
+      const code =
+        mailerConfigured || this.config.get<string>('NODE_ENV') === 'production'
+          ? this.generateOtp()
+          : this.config.get<string>('OTP_MOCK_CODE', '123456');
+
+      const codeHash = await bcrypt.hash(code, 10);
+      const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+      await this.prisma.passwordResetSession.deleteMany({ where: { email } });
+      await this.prisma.passwordResetSession.create({
+        data: { email, codeHash, expiresAt },
+      });
+
+      await this.sendPasswordResetEmail(user.email, user.name, code);
+    }
+
+    return { message: PASSWORD_RESET_SUCCESS_MESSAGE };
+  }
+
+  async confirmPasswordReset(dto: ConfirmPasswordResetDto) {
+    const email = this.usersService.normalizeEmail(dto.email);
+    const session = await this.prisma.passwordResetSession.findFirst({
+      where: { email },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!session) {
+      throw new UnauthorizedException('Código inválido ou expirado');
+    }
+
+    if (session.expiresAt < new Date()) {
+      throw new UnauthorizedException('Código expirado');
+    }
+
+    if (session.attempts >= MAX_OTP_ATTEMPTS) {
+      throw new UnauthorizedException('Limite de tentativas excedido');
+    }
+
+    const valid = await bcrypt.compare(dto.code, session.codeHash);
+    if (!valid) {
+      await this.prisma.passwordResetSession.update({
+        where: { id: session.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new UnauthorizedException('Código inválido');
+    }
+
+    const user = await this.usersService.findByEmail(email);
+    if (!user || user.role !== UserRole.PARTICIPANT) {
+      await this.prisma.passwordResetSession.delete({ where: { id: session.id } });
+      throw new UnauthorizedException('Código inválido ou expirado');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.usersService.updatePasswordHash(user.id, passwordHash);
+    await this.prisma.passwordResetSession.delete({ where: { id: session.id } });
+
+    return { message: 'Senha redefinida com sucesso' };
+  }
+
+  private async sendPasswordResetEmail(
+    email: string,
+    name: string,
+    code: string,
+  ) {
+    const appUrl = resolveWebAppUrl(this.config);
+    const resetLink = buildAppPath(appUrl, '/aluno/redefinir-senha');
+    const body = `
+      <p style="margin: 0 0 16px;">Olá, <strong>${escapeHtml(name)}</strong>!</p>
+      <p style="margin: 0 0 16px;">Use o código abaixo para redefinir sua senha no Vaga Garantida. Ele expira em ${OTP_EXPIRY_MINUTES} minutos.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin: 0 0 16px; background-color: #F3EEFF; border: 1px solid #D4B8FF; border-radius: 12px;">
+        <tr>
+          <td style="padding: 20px; text-align: center;">
+            <p style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #111827;">${escapeHtml(code)}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0;">Se você não pediu essa redefinição, ignore este e-mail.</p>
+    `;
+
+    await this.email.sendEmail(
+      email,
+      'Código para redefinir senha',
+      emailLayout('Redefinir senha', body, appUrl, {
+        href: resetLink,
+        label: 'Abrir página de redefinição',
+      }),
+    );
   }
 
   /** @deprecated Use register/login com email e senha */

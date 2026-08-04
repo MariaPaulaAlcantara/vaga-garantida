@@ -72,6 +72,13 @@ export class UsersService {
     return this.toPublicUser(user);
   }
 
+  async updatePasswordHash(userId: string, passwordHash: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+  }
+
   async getParticipationHistory(userId: string) {
     const registrations = await this.prisma.eventRegistration.findMany({
       where: {
