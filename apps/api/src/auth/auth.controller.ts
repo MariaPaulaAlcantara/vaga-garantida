@@ -2,9 +2,11 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@vaga-garantida/database';
 import { AuthService } from './auth.service';
+import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @ApiTags('auth')
@@ -28,6 +30,18 @@ export class AuthController {
   @ApiOperation({ summary: 'Login de organizador (professor)' })
   loginOrganizer(@Body() dto: LoginDto) {
     return this.authService.login(dto, UserRole.ORGANIZER);
+  }
+
+  @Post('password-reset/request')
+  @ApiOperation({ summary: 'Solicitar código de redefinição de senha (aluno)' })
+  requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(dto);
+  }
+
+  @Post('password-reset/confirm')
+  @ApiOperation({ summary: 'Confirmar código e redefinir senha (aluno)' })
+  confirmPasswordReset(@Body() dto: ConfirmPasswordResetDto) {
+    return this.authService.confirmPasswordReset(dto);
   }
 
   @Post('otp/request')

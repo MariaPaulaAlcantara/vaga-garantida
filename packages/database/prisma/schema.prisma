@@ -105,3 +105,14 @@ model OtpSession {
 
   @@index([phone])
 }
+
+model PasswordResetSession {
+  id        String   @id @default(uuid())
+  email     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}

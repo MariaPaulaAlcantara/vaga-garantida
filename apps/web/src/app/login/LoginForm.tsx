@@ -21,6 +21,7 @@ export function LoginForm() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const resetSuccess = searchParams.get('reset') === '1';
 
   const isOrganizer = mode === 'organizer';
 
@@ -79,6 +80,12 @@ export function LoginForm() {
           : 'Use seu email e senha para reservar vagas nas aulas.'}
       </p>
 
+      {resetSuccess && !isOrganizer && (
+        <p className="mt-4 text-sm text-green-700">
+          Senha redefinida com sucesso. Faça login com a nova senha.
+        </p>
+      )}
+
       <form onSubmit={handleLogin} className="mt-6 space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-700">
@@ -123,6 +130,17 @@ export function LoginForm() {
           Cadastre-se aqui
         </Link>
       </p>
+
+      {!isOrganizer && (
+        <p className="mt-3 text-center text-sm text-slate-500">
+          <Link
+            href="/aluno/redefinir-senha"
+            className="text-brand hover:underline"
+          >
+            Esqueci minha senha
+          </Link>
+        </p>
+      )}
     </div>
   );
 }
