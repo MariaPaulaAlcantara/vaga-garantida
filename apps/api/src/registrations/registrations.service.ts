@@ -162,58 +162,61 @@ export class RegistrationsService {
   async cancel(user: User, registrationId: string) {
     this.assertParticipant(user);
 
-    const outcome = await this.prisma.$transaction(async (tx) => {
-      const registration = await tx.eventRegistration.findUnique({
-        where: { id: registrationId },
-        include: { event: true },
-      });
+    const outcome = await this.prisma.$transaction(
+      async (tx) => {
+        const registration = await tx.eventRegistration.findUnique({
+          where: { id: registrationId },
+          include: { event: true },
+        });
 
-      if (!registration) {
-        throw new NotFoundException('Inscrição não encontrada');
-      }
+        if (!registration) {
+          throw new NotFoundException('Inscrição não encontrada');
+        }
 
-      if (registration.userId !== user.id) {
-        throw new ForbiddenException('Acesso negado');
-      }
+        if (registration.userId !== user.id) {
+          throw new ForbiddenException('Acesso negado');
+        }
 
-      if (!ACTIVE_STATUSES.includes(registration.status)) {
-        throw new BadRequestException('Inscrição não pode ser cancelada');
-      }
+        if (!ACTIVE_STATUSES.includes(registration.status)) {
+          throw new BadRequestException('Inscrição não pode ser cancelada');
+        }
 
-      const wasOccupyingSpot =
-        registration.status === RegistrationStatus.RESERVED ||
-        registration.status === RegistrationStatus.CONFIRMED;
+        const wasOccupyingSpot =
+          registration.status === RegistrationStatus.RESERVED ||
+          registration.status === RegistrationStatus.CONFIRMED;
 
-      await tx.eventRegistration.update({
-        where: { id: registrationId },
-        data: {
-          status: RegistrationStatus.CANCELLED,
-          cancelledAt: new Date(),
-          waitlistPosition: null,
-        },
-      });
+        await tx.eventRegistration.update({
+          where: { id: registrationId },
+          data: {
+            status: RegistrationStatus.CANCELLED,
+            cancelledAt: new Date(),
+            waitlistPosition: null,
+          },
+        });
 
-      if (registration.status === RegistrationStatus.WAITLIST) {
-        await this.promotion.reindexWaitlist(tx, registration.eventId);
-      }
+        if (registration.status === RegistrationStatus.WAITLIST) {
+          await this.promotion.reindexWaitlist(tx, registration.eventId);
+        }
 
-      let promotionResult = null;
-      if (wasOccupyingSpot) {
-        promotionResult = await this.promotion.promoteNextInWaitlist(
-          tx,
-          registration.eventId,
-          true,
-        );
-      }
+        let promotionResult = null;
+        if (wasOccupyingSpot) {
+          promotionResult = await this.promotion.promoteNextInWaitlist(
+            tx,
+            registration.eventId,
+            true,
+          );
+        }
 
-      return {
-        eventId: registration.eventId,
-        waitlistReindexed:
-          registration.status === RegistrationStatus.WAITLIST ||
-          promotionResult !== null,
-        promoted: promotionResult?.promoted ?? null,
-      };
-    });
+        return {
+          eventId: registration.eventId,
+          waitlistReindexed:
+            registration.status === RegistrationStatus.WAITLIST ||
+            promotionResult !== null,
+          promoted: promotionResult?.promoted ?? null,
+        };
+      },
+      { maxWait: 10_000, timeout: 20_000 },
+    );
 
     void this.dispatchPromotionAndWaitlistNotifications(outcome);
 
@@ -434,25 +437,28 @@ export class RegistrationsService {
     const results = [];
 
     for (const registration of expired) {
-      const outcome = await this.prisma.$transaction(async (tx) => {
-        await tx.eventRegistration.update({
-          where: { id: registration.id },
-          data: { status: RegistrationStatus.EXPIRED },
-        });
+      const outcome = await this.prisma.$transaction(
+        async (tx) => {
+          await tx.eventRegistration.update({
+            where: { id: registration.id },
+            data: { status: RegistrationStatus.EXPIRED },
+          });
 
-        const promotionResult = await this.promotion.promoteNextInWaitlist(
-          tx,
-          registration.eventId,
-          true,
-        );
+          const promotionResult = await this.promotion.promoteNextInWaitlist(
+            tx,
+            registration.eventId,
+            true,
+          );
 
-        return {
-          eventId: registration.eventId,
-          expiredId: registration.id,
-          waitlistReindexed: promotionResult !== null,
-          promoted: promotionResult?.promoted ?? null,
-        };
-      });
+          return {
+            eventId: registration.eventId,
+            expiredId: registration.id,
+            waitlistReindexed: promotionResult !== null,
+            promoted: promotionResult?.promoted ?? null,
+          };
+        },
+        { maxWait: 10_000, timeout: 20_000 },
+      );
 
       void this.dispatchPromotionAndWaitlistNotifications(outcome);
       results.push({
