@@ -133,17 +133,25 @@ export class RegistrationPromotionService {
     tx: Prisma.TransactionClient,
     eventId: string,
   ): Promise<void> {
-    const waitlist = await tx.eventRegistration.findMany({
-      where: { eventId, status: RegistrationStatus.WAITLIST },
-      orderBy: [{ waitlistPosition: 'asc' }, { joinedAt: 'asc' }],
-    });
-
-    for (let i = 0; i < waitlist.length; i++) {
-      await tx.eventRegistration.update({
-        where: { id: waitlist[i].id },
-        data: { waitlistPosition: i + 1 },
-      });
-    }
+    // One round-trip avoids P2028 timeouts from N sequential updates in interactive txs.
+    await tx.$executeRaw`
+      UPDATE "EventRegistration" AS er
+      SET
+        "waitlistPosition" = sub.new_position,
+        "updatedAt" = CURRENT_TIMESTAMP
+      FROM (
+        SELECT
+          id,
+          (ROW_NUMBER() OVER (
+            ORDER BY "waitlistPosition" ASC NULLS LAST, "joinedAt" ASC
+          ))::integer AS new_position
+        FROM "EventRegistration"
+        WHERE "eventId" = ${eventId}
+          AND status = CAST(${RegistrationStatus.WAITLIST} AS "RegistrationStatus")
+      ) AS sub
+      WHERE er.id = sub.id
+        AND er."waitlistPosition" IS DISTINCT FROM sub.new_position
+    `;
   }
 
   async releaseSpotAndPromote(
