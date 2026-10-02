@@ -208,10 +208,6 @@ export class RegistrationsService {
         }
 
         return {
-          eventId: registration.eventId,
-          waitlistReindexed:
-            registration.status === RegistrationStatus.WAITLIST ||
-            promotionResult !== null,
           promoted: promotionResult?.promoted ?? null,
         };
       },
@@ -451,9 +447,7 @@ export class RegistrationsService {
           );
 
           return {
-            eventId: registration.eventId,
             expiredId: registration.id,
-            waitlistReindexed: promotionResult !== null,
             promoted: promotionResult?.promoted ?? null,
           };
         },
@@ -475,8 +469,6 @@ export class RegistrationsService {
   }
 
   private async dispatchPromotionAndWaitlistNotifications(outcome: {
-    eventId: string;
-    waitlistReindexed: boolean;
     promoted: {
       user: { email: string; name: string };
       event: {
@@ -500,59 +492,6 @@ export class RegistrationsService {
         });
       } catch (err) {
         this.logger.error('Falha ao avisar promoção da lista de espera', err);
-      }
-    }
-
-    if (outcome.waitlistReindexed) {
-      await this.dispatchWaitlistPositionUpdates(outcome.eventId);
-    }
-  }
-
-  private async dispatchWaitlistPositionUpdates(eventId: string) {
-    const waitlist = await this.prisma.eventRegistration.findMany({
-      where: {
-        eventId,
-        status: RegistrationStatus.WAITLIST,
-        waitlistPosition: { not: null },
-      },
-      include: {
-        user: { select: { email: true, name: true } },
-        event: { select: { id: true, title: true, startsAt: true } },
-      },
-      orderBy: { waitlistPosition: 'asc' },
-    });
-
-    for (const registration of waitlist) {
-      const position = registration.waitlistPosition;
-      if (position == null) {
-        continue;
-      }
-
-      if (registration.lastNotifiedWaitlistPosition === position) {
-        continue;
-      }
-
-      try {
-        if (registration.lastNotifiedWaitlistPosition == null) {
-          await this.notifications.notifyWaitlistPosition({
-            registrationId: registration.id,
-            user: registration.user,
-            event: registration.event,
-            position,
-          });
-        } else {
-          await this.notifications.notifyWaitlistPositionUpdate({
-            registrationId: registration.id,
-            user: registration.user,
-            event: registration.event,
-            position,
-          });
-        }
-      } catch (err) {
-        this.logger.error(
-          `Falha ao avisar avanço na lista de espera (${registration.id})`,
-          err,
-        );
       }
     }
   }
